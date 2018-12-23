@@ -5,7 +5,8 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.10.0"]
 
-                 [zprint "0.4.13"]
+                 [zprint "0.4.13"] ;; TODO test only
+                 [org.clojure/test.check "0.10.0-alpha3"] ;; TODO test only
                  
                  ^{:voom {:repo "https://github.com/foobar27/meliae" :branch "master"}} ;; TODO fixed version
                  [com.github.foobar27/meliae "0.1.0-20181223_121930-g74cf647"]]

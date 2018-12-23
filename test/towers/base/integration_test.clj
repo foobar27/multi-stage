@@ -4,11 +4,27 @@
             [towers.base.parser :refer :all]
             [towers.base.interpreter :refer [evalmsg]]
             [clojure.test :as t]
-            [clojure.test :refer :all]))
+            [clojure.test :refer :all]
+            [clojure.test.check :as tc]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]))
+
+(def ^:private arithmetic-expression-generator
+  (gen/recursive-gen (fn [inner-gen]
+                       (gen/fmap (fn [xs] (apply list xs))
+                                 (gen/tuple (gen/elements #{'+ '*}) inner-gen inner-gen)))
+                     gen/int))
+
+(defspec randomly-nested-arithmetic-expressions 100
+  (prop/for-all [expression arithmetic-expression-generator]
+                (= (->constant (eval expression))
+                   (evalmsg [] (clj->expression expression)))))
 
 (deftest arithmetic-expression
-  (is (= (->constant 7)
-         (evalmsg [] (parse (+ 1 (* 2 3)))))))
+  (let [expression '(+ 1 (* 2 3))]
+    (is (= (->constant (eval expression))
+           (evalmsg [] (clj->expression expression))))))
 
 (defn matches-clj [r s]
   (if (empty? r)
