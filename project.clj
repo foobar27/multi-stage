@@ -6,6 +6,6 @@
   :plugins [[lein-voom "0.1.0-20180617_140646-g0ba7ec8"]]
   :dependencies [[org.clojure/clojure "1.10.0"]
                  ^{:voom {:repo "https://github.com/foobar27/meliae" :branch "master"}} ;; TODO fixed version
-                 [foobar27/meliae "0.1.0"]
+                 [com.github.foobar27/meliae "0.1.0-SNAPSHOT"]
                  ]
   :repl-options {:init-ns towers.core})
