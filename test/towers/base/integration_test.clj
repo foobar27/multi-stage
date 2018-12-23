@@ -21,10 +21,25 @@
                 (= (->constant (eval expression))
                    (evalmsg [] (clj->expression expression)))))
 
-(deftest arithmetic-expression
-  (let [expression '(+ 1 (* 2 3))]
-    (is (= (->constant (eval expression))
-           (evalmsg [] (clj->expression expression))))))
+
+(def ^:private xyz-expression-generator
+  (gen/fmap (fn [[expression & args]]
+              (apply list
+                     (concat '(fn [x y z])
+                             [expression])
+                     args))
+            (apply gen/tuple
+                   (gen/recursive-gen (fn [inner-gen]
+                                        (gen/fmap (fn [xs] (apply list xs))
+                                                  (gen/tuple (gen/elements #{'+ '*}) inner-gen inner-gen)))
+                                      (gen/one-of [gen/int
+                                                   (gen/elements #{'x 'y 'z})]))
+                   (map (fn [i] gen/int) (range 3)))))
+
+(defspec randomly-nested-xyz-expressions 100
+  (prop/for-all [expression xyz-expression-generator]
+                (= (->constant (eval expression))
+                   (evalmsg [] (clj->expression expression)))))
 
 (defn matches-clj [r s]
   (if (empty? r)
