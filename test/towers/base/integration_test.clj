@@ -41,6 +41,21 @@
                 (= (->constant (eval expression))
                    (evalmsg [] (clj->expression expression)))))
 
+(def ^:private factorial-code
+  '(fn self [n]
+     (if (> n 0)
+       (* n (self (- n 1)))
+       1))) 
+
+(defn- factorial-code-application [n]
+  (list factorial-code n))
+
+(deftest factorial-evaluation
+  (doseq [n (range 10)]
+    (let [expression (factorial-code-application n)]
+      (is (= (->constant (eval expression))
+             (evalmsg [] (clj->expression (factorial-code-application n))))))))
+
 (defn matches-clj [r s]
   (if (empty? r)
     true
