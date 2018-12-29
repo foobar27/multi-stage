@@ -74,7 +74,7 @@
               (let [b (get-block)]
                 (if (empty? b)
                   res
-                  (match* res
+                  (match* [res]
                     [(->code l)] (->code (fold-right ->let l b)))))))))
 
 (declare evalms)

@@ -108,6 +108,32 @@
                                                (->lift (->literal 1))))))))
            base-fac-anf))))
 
+
+(comment
+  ;; variable indices:
+  ;; x3 -> 0
+  ;; x -> 2
+  ;; x1 -> 3
+  ;; x2 -> 4
+  (->code (let [x3 (fn _ [x]
+                     (let [x1 (* x x)]
+                       (let [x2 (+ x x1)]
+                         x2)))]
+            x3)))
+
+(deftest paper-examples
+  (testing "figure 4"
+    (is (= (->code (->let (->lambda (->let (->times (->variable 1 "fresh") ;; TODO should have been "x"
+                                                    (->variable 1 "fresh")) ;; TODO should have been "x"
+                                           (->let (->plus (->variable 1 "fresh") ;; TODO should have been "x"
+                                                          (->variable 2 "fresh")) ;; TODO could be called "fresh-plus"?
+                                                  (->variable 3 "fresh")))) ;; TODO could be called "fresh-times"?
+                          (->variable 0 "fresh")))
+           (debug (evalmsg []
+                           (->lift (->lambda (->plus (->variable 1 "x")
+                                                     (->times (->variable 1 "x")
+                                                              (->variable 1 "x")))))))))))
+
 (comment
   (let [e (->lift (->lambda (->plus (->variable 1 "") (->times (->variable 0 "") (->variable 0 "")))))]
     (print-pattern (evalms [] e))))
