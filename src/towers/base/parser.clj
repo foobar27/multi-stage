@@ -132,7 +132,7 @@
   (let [n (count args)]
     (if (= 3 n)
       (arg-recur ->if args sym->index)
-      (throw (IllegalArgumentException. (str "Can only translate if-statements with two code paths, got " n ": " args))))))
+      (throw (IllegalArgumentException. (str "Can only translate if-statements with two code paths, got " (dec n) ": " args))))))
 
 (defn clj->expression [code]
   (let [code (macroexpand-all code)]
