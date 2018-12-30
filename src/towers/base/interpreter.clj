@@ -239,7 +239,7 @@
       (reflectc (->run b1 (reifyc #(evalms env ee))))
       
       [_]
-      (evalmsg env (fn [] (reify (fn [] (evalms env ee))))))))
+      (evalmsg env (reify (fn [] (evalms env ee)))))))
 
 (s/fdef evalmsg
   :args (s/cat :env ::ast/environment
