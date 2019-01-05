@@ -97,14 +97,17 @@
       (throw (IllegalArgumentException. (str "Unhandled resolved symbol: " f))))))
 
 (defmethod native-fn->expression ::undefined [f sym->index]
-  (condp = (resolve-symbol f) ;; TODO implement via multi methods
-    ;; TODO this could be done better via variadic functions
-    ;; TODO extend to other functions
-    `= (let [sym->index (-> sym->index
-                            (push-var "x0")
-                            (push-var "x1"))]
-         (->lambda (->lambda (->plus (get-var sym->index "x0")
-                                     (get-var sym->index "x1")))))))
+  (letfn [(build-lambda [ctor n]
+            (let [var-names (map (fn [i] (str "arg" i))
+                                 (range n))
+                  sym->index (reduce push-var sym->index var-names)]
+              (nth (iterate ->lambda (apply ctor (map (partial get-var sym->index)
+                                                      var-names)))
+                   n)))]
+    (condp = (resolve-symbol f) ;; TODO implement via multi methods
+      ;; TODO this could be done better via variadic functions
+      ;; TODO extend to other native functions
+      `= (build-lambda ->equals? 2))))
 
 (defmethod sexp->expression-unresolved-dispatch ::undefined [f _ _]  
   (throw (IllegalArgumentException. (str "Unhandled unresolved symbol: " f)))) ;; TODO line number?
