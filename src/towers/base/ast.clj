@@ -24,6 +24,8 @@
   cons?    [e1 ::expression]
   nil?     [e ::expression]
   empty?   [e ::expression]
+  number?  [e ::expression]
+  symbol?  [e ::expression]
   car      [e ::expression]
   cdr      [e ::expression]
   let      [e1 ::expression e2 ::expression]  ;; TODO allow destructuring?

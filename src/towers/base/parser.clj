@@ -1,6 +1,7 @@
 (ns towers.base.parser
   (:require [towers.base.ast :refer [->literal ->lambda ->let ->variable ->cons ->plus ->minus ->times ->apply ->if
-                                     ->nil? ->equals? ->TRUE ->FALSE ->NIL ->car ->cdr ->empty? ->lift ->gt]]
+                                     ->nil? ->equals? ->TRUE ->FALSE ->NIL ->car ->cdr ->empty? ->number? ->symbol?
+                                     ->lift ->gt]]
             [clojure.walk :refer [macroexpand-all]]
             [towers.utils :refer [resolve-symbol]]))
 
@@ -72,6 +73,8 @@
    `rest   ->cdr
    `nil?   ->nil?
    `empty? ->empty?
+   `number?  ->number?
+   `symbol? ->symbol?
    `>      ->gt
    `towers.base.interpreter/lift   ->lift
    `true   ->TRUE
