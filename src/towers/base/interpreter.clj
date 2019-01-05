@@ -3,10 +3,10 @@
   (:require [clojure.spec.alpha :as s]
             [towers.base.ast :refer [;; expression ctors
                                      ->literal ->variable ->lambda ->apply ->cons ->let ->if
-                                     ->plus ->minus ->times ->lift ->run ->car ->cdr ->cons ->literal?
+                                     ->plus ->minus ->times ->divide ->lift ->run ->car ->cdr ->cons ->literal?
                                      ->cons? ->empty? ->gt ->lt
                                      ;; expression predicates
-                                     literal? code? cons?
+                                     literal? code? cons? code? closure? ->number? ->symbol?
                                      ;; value ctors
                                      ->constant ->tuple ->closure ->code]
              :as ast]
@@ -168,6 +168,15 @@
     [(->cons? v)]
     (evalms-predicate env ->cons? cons? v)
 
+    [(->empty? v)]
+    (evalms-predicate env ->empty? empty? v)
+
+    [(->number? v)]
+    (evalms-predicate env ->number? number? v)
+
+    [(->symbol? v)]
+    (evalms-predicate env ->symbol? symbol? v)
+    
     [(->variable n s)]
     (nth env n)
 
@@ -225,6 +234,9 @@
     
     [(->times e1 e2)]
     (evalms-binary env ->times * e1 e2)
+
+    [(->divide e1 e2)]
+    (evalms-binary env ->divide * e1 e2)
 
     [(->gt e1 e2)]
     (evalms-binary env ->gt > e1 e2)

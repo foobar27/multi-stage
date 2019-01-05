@@ -33,6 +33,7 @@
   plus     [a ::expression b ::expression] ;; TODO make variadic
   minus    [a ::expression b ::expression]
   times    [a ::expression b ::expression] ;; TODO make variadic
+  divide   [a ::expression b ::expression] ;; TODO make variadic
   gt       [a ::expression b ::expression]
   lt       [a ::expression b ::expression]
   ;; TODO other operators

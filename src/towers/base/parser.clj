@@ -1,5 +1,5 @@
 (ns towers.base.parser
-  (:require [towers.base.ast :refer [->literal ->lambda ->let ->variable ->cons ->plus ->minus ->times ->apply ->if
+  (:require [towers.base.ast :refer [->literal ->lambda ->let ->variable ->cons ->plus ->minus ->times ->divide ->apply ->if
                                      ->nil? ->equals? ->TRUE ->FALSE ->NIL ->car ->cdr ->empty? ->number? ->symbol?
                                      ->lift ->gt]]
             [clojure.walk :refer [macroexpand-all]]
@@ -98,7 +98,7 @@
 
 (defmethod native-fn->expression ::undefined [f sym->index]
   (letfn [(build-lambda [ctor n]
-            (let [var-names (map (fn [i] (str "arg" i))
+            (let [var-names (map (fn [i] (str "native-arg" i))
                                  (range n))
                   sym->index (reduce push-var sym->index var-names)]
               (nth (iterate ->lambda (apply ctor (map (partial get-var sym->index)
@@ -107,6 +107,15 @@
     (condp = (resolve-symbol f) ;; TODO implement via multi methods
       ;; TODO this could be done better via variadic functions
       ;; TODO extend to other native functions
+      `number? (build-lambda ->number? 1)
+      `symbol? (build-lambda ->symbol? 1)
+      `first (build-lambda ->first 1)
+      `rest (build-lambda ->rest 1)
+      `cons (build-lambda ->cons 1)
+      `+ (build-lambda ->plus 2)
+      `- (build-lambda ->minus 2)
+      `* (build-lambda ->times 2)
+      `/ (build-lambda ->divide 2)
       `= (build-lambda ->equals? 2))))
 
 (defmethod sexp->expression-unresolved-dispatch ::undefined [f _ _]  
