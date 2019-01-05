@@ -19,6 +19,8 @@
 
 (defmulti sexp->expression-unresolved-dispatch (fn [f args sym->index] f) :default ::undefined)
 
+(defmulti native-fn->expression (fn [f sym->index] f) :default ::undefined)
+
 (defn sexp->expression [expr sym->index]
   (cond
     (number? expr)
@@ -26,6 +28,7 @@
     
     (symbol? expr)
     (or (get-var sym->index expr)
+        (native-fn->expression expr sym->index)
         (throw (IllegalArgumentException. (str "Unknown variable: " expr " (keys: " (keys sym->index) ")"))))
     
     (seq? expr)
@@ -92,6 +95,16 @@
     (if-let [[ctor neutral] (get n-ary-associative-ctors f)]
       (arg-recur-2-associative ctor neutral args sym->index)
       (throw (IllegalArgumentException. (str "Unhandled resolved symbol: " f))))))
+
+(defmethod native-fn->expression ::undefined [f sym->index]
+  (condp = (resolve-symbol f) ;; TODO implement via multi methods
+    ;; TODO this could be done better via variadic functions
+    ;; TODO extend to other functions
+    `= (let [sym->index (-> sym->index
+                            (push-var "x0")
+                            (push-var "x1"))]
+         (->lambda (->lambda (->plus (get-var sym->index "x0")
+                                     (get-var sym->index "x1")))))))
 
 (defmethod sexp->expression-unresolved-dispatch ::undefined [f _ _]  
   (throw (IllegalArgumentException. (str "Unhandled unresolved symbol: " f)))) ;; TODO line number?
