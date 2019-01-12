@@ -162,6 +162,9 @@
       (arg-recur ->if args sym->index)
       (throw (IllegalArgumentException. (str "Can only translate if-statements with two code paths, got " (dec n) ": " args))))))
 
+(defmethod sexp->expression-unresolved-dispatch 'quote [_ args sym->index]
+  (reduce #(->cons %2 %1) nil (reverse args)))
+
 (defn clj->expression [code]
   (let [code (macroexpand-all code)]
     ;;(println "compiling" code)
