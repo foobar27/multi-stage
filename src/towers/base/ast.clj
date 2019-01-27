@@ -26,8 +26,8 @@
   empty?   [e ::expression]
   number?  [e ::expression]
   symbol?  [e ::expression]
-  car      [e ::expression]
-  cdr      [e ::expression]
+  car      [e ::expression] ;; TODO rename to first
+  cdr      [e ::expression] ;; TODO rename to rest
   let      [e1 ::expression e2 ::expression]  ;; TODO allow destructuring?
   if       [c ::expression a ::expression b ::expression]
   plus     [a ::expression b ::expression] ;; TODO make variadic

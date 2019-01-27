@@ -3,7 +3,7 @@
             [towers.base.ast :refer [->lambda ->times ->plus ->minus ->variable ->literal ->let ->apply ->cons ->if
                                      ->TRUE ->equals? ->empty? ->car ->cdr]]
             [meliae.patterns :refer [print-pattern]]
-            [towers.test-utils :refer [verify-pattern]]
+            [towers.test-utils :refer [verify-pattern remove-auto-gensym]]
             [clojure.test :refer :all]
             [clojure.spec.test.alpha :as stest]
             [clojure.spec.alpha :as s]))
@@ -11,9 +11,7 @@
 (stest/instrument (stest/enumerate-namespace ['meliae.patterns 'towers.base.ast 'towers.base.parser-test]))
 
 (defmacro verify-parse [input expected]
-  `(verify-pattern ( parse ~input) ~expected))
-
-(clojure.pprint/pprint (macroexpand `(verify-parse (+ 1 2) (->plus (->literal 1) (->plus (->literal 2)))) ))
+  `(verify-pattern (remove-auto-gensym (parse ~input)) ~expected))
 
 (deftest variadic-operators
   (testing "plus"
@@ -77,6 +75,16 @@
      (fn [x y z] (+ x (* y z)))
      (->lambda (->lambda (->lambda (->plus (->variable 1 "x")
                                            (->times (->variable 3 "y") (->variable 5 "z")))))))))
+
+(deftest fn*-via-read-macro
+  ;; This usess the syntax (fn* [x] (+ x 1))
+  ;; (without the parenthesis which would be used for multiple arities)
+  (testing "anon fn"
+    (verify-parse
+     #(+ % 1)
+     (->lambda (->plus (->variable 1 "p1")
+                       (->literal 1))))))
+
 
 ;; TODO also test destructuring let
 (deftest parse-let

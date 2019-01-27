@@ -3,7 +3,8 @@
                                      ->nil? ->equals? ->TRUE ->FALSE ->NIL ->car ->cdr ->empty? ->number? ->symbol?
                                      ->lift ->gt]]
             [clojure.walk :refer [macroexpand-all]]
-            [towers.utils :refer [resolve-symbol]]))
+            [towers.utils :refer [resolve-symbol]]
+            [towers.clojure-parser :refer [destructure-fn*]]))
 
 (defn- get-var [sym->index s]
   (if-let [i (get sym->index s)]
@@ -22,34 +23,35 @@
 (defmulti native-fn->expression (fn [f sym->index] f) :default ::undefined)
 
 (defn sexp->expression [expr sym->index]
-  (cond
-    (number? expr)
-    (->literal expr)
-    
-    (symbol? expr)
-    (or (get-var sym->index expr)
-        (native-fn->expression expr sym->index)
-        (throw (IllegalArgumentException. (str "Unknown variable: " expr " (keys: " (keys sym->index) ")"))))
-    
-    (seq? expr)
-    (let [[f & args] expr
-          apply-lambda (fn [f]
-                         (let [args (map #(sexp->expression % sym->index) args)
-                               args (if (seq args) args [(->literal 0)])]
-                           (reduce (fn [out arg] (->apply out arg)) f args)))]
-      (if (symbol? f)
-        (if-let [resolved-f (get-var sym->index f)]
-          ;; resolved via sym->index: apply function
-          (apply-lambda resolved-f)
-          ;; resolved via clojure namespaces
-          (if-let [resolved-f (resolve-symbol f)]
-            (sexp->expression-resolved-dispatch resolved-f args sym->index)
-            (sexp->expression-unresolved-dispatch f args sym->index)))
-        ;; apply expression
-        (let [f (sexp->expression f sym->index)]
-          (apply-lambda f))))
+  (do
+    (cond
+      (number? expr)
+      (->literal expr)
+      
+      (symbol? expr)
+      (or (get-var sym->index expr)
+          (native-fn->expression expr sym->index)
+          (throw (IllegalArgumentException. (str "Unknown variable: " expr " (keys: " (keys sym->index) ")"))))
+      
+      (seq? expr)
+      (let [[f & args] expr
+            apply-lambda (fn [f]
+                           (let [args (map #(sexp->expression % sym->index) args)
+                                 args (if (seq args) args [(->literal 0)])]
+                             (reduce (fn [out arg] (->apply out arg)) f args)))]
+        (if (symbol? f)
+          (if-let [resolved-f (get-var sym->index f)]
+            ;; resolved via sym->index: apply function
+            (apply-lambda resolved-f)
+            ;; resolved via clojure namespaces
+            (if-let [resolved-f (resolve-symbol f)]
+              (sexp->expression-resolved-dispatch resolved-f args sym->index)
+              (sexp->expression-unresolved-dispatch f args sym->index)))
+          ;; apply expression
+          (let [f (sexp->expression f sym->index)]
+            (apply-lambda f))))
 
-    true (throw (IllegalArgumentException. (str "Don't know how to translate: " expr)))))
+      true (throw (IllegalArgumentException. (str "Don't know how to translate: " expr))))))
 
 (defn- arg-recur [ctor args sym->index]
   (apply ctor (map #(sexp->expression % sym->index) args)))
@@ -109,8 +111,8 @@
       ;; TODO extend to other native functions
       `number? (build-lambda ->number? 1)
       `symbol? (build-lambda ->symbol? 1)
-      `first (build-lambda ->first 1)
-      `rest (build-lambda ->rest 1)
+      `first (build-lambda ->car 1)
+      `rest (build-lambda ->cdr 1)
       `cons (build-lambda ->cons 1)
       `+ (build-lambda ->plus 2)
       `- (build-lambda ->minus 2)
@@ -121,24 +123,37 @@
 (defmethod sexp->expression-unresolved-dispatch ::undefined [f _ _]  
   (throw (IllegalArgumentException. (str "Unhandled unresolved symbol: " f)))) ;; TODO line number?
 
+;; TODO support multiple arities syntax
+;; TODO support recur
+(defn- destructured-fn*->expression [{:keys [name arities]} sym->index]
+  (let [name (or name
+                 (gensym "unnamed"))
+        [_ {:keys [args body]} & _] (first arities)] ;; TODO support multiple arities
+    (condp = (count args)
+      0 (destructured-fn*->expression {:name name
+                                       :arities {1 {:args [(gensym "unused")]
+                                                    :body body}}}
+                                      sym->index)
+      1 (let [arg (first args)
+              sym->index (-> sym->index (push-var name) (push-var arg))]
+          ;; TODO support multiple statements in body
+          (->lambda (sexp->expression (first body) sym->index)))
+      ;; else
+      (let [[arg & args] args
+            sym->index (-> sym->index (push-var name) (push-var arg))]
+        (->lambda (destructured-fn*->expression {;; Recursion should point to first lambda only
+                                                 ;; So we need to give "unused" names to the other lambdas
+                                                 :name nil 
+                                                 :arities {(count args) {:args args
+                                                                         :body body}}}
+                                                sym->index))))))
+
+(-> {:a 0}
+    (push-var :x)
+    (push-var :y))
 
 (defmethod sexp->expression-unresolved-dispatch 'fn* [_ args sym->index]
-  (let [[f-name [args body]] (if (symbol? (first args))
-                               args
-                               (into [(gensym "anon-f")] args))]
-    (if (empty? args)
-      (sexp->expression `(fn* ([~(gensym "unused")] ~body))
-                        sym->index)
-      (let [[arg & args] args
-            sym->index (-> sym->index
-                           (push-var f-name)
-                           (push-var arg))]
-        (->lambda (sexp->expression (if (empty? args)
-                                      ;; there has only been 1 arg in total
-                                      body
-                                      ;; more args -> reduce to 1 arg
-                                      `(fn* ([~@args] ~body)))
-                                    sym->index))))))
+  (destructured-fn*->expression (destructure-fn* args) sym->index))
 
 (defmethod sexp->expression-unresolved-dispatch 'let* [_ args sym->index]
   (let [[bindings body] args

@@ -1,8 +1,16 @@
 (ns towers.test-utils
   (:require [meliae.patterns :refer [print-pattern]]
             [clojure.test :as t]
+            [clojure.walk :refer [macroexpand-all postwalk]]
             [zprint.core :as zp]
             [clojure.pprint :refer :all]))
+
+(defn remove-auto-gensym [f]
+  (postwalk (fn [f] (if (and (symbol? f)
+                             (not (namespace f)))
+                      (symbol (.replaceAll (name f) "__.*" ""))
+                      f))
+            f))
 
 (defn- cast-to-symbol [v]
   (cond

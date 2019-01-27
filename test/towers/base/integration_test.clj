@@ -2,7 +2,7 @@
   (:require [meliae.patterns :refer [print-pattern]]
             [towers.base.ast :refer :all]
             [towers.base.parser :refer :all]
-            [towers.base.interpreter :refer [evalmsg]]
+            [towers.base.interpreter :refer [evalmsg lift]]
             [clojure.test :as t]
             [clojure.test :refer :all]
             [clojure.test.check :as tc]
@@ -89,26 +89,39 @@
                     (rest s))
            (lift 0)))))))
 
+
 (defn matches-ab [x]
   ;; TODO need to run the interpreter
-  (->run 0 (->lift (->apply matches '(a b)))))
+  ;; TODO re-write into clojure-like syntax (needs to lookup the definition of "matches" somewhere)
+  (->run (->literal 0) (->lift (->apply matches '(a b)))))
 
-(evalmsg #{['a 'b 'c]}
-         (->run 0 (->lift (->apply matches '(a b)))))
+(print-pattern (matches-ab [\a \b]))
 
-(print-pattern (matches-ab '(a b c)))
+(evalmsg #{}
+         (->run (->lambda (->literal 0)) (->literal 42)))
+
+(evalmsg #{}
+         (->run (->literal 0) (->lift (->apply matches (->literal ('a 'b))))))
+
+(print-pattern (->run 0 (->lift (->apply matches '(a b)))))
 
 (->run 0
-       (->lift (->apply (->lambda (->lambda
-                                   (->if (->empty? (->variable 1 r))
-                                         (->lift (->literal 1))
-                                         (->if (->empty? (->variable 3 s))
-                                               (->lift (->literal 0))
-                                               (->if (->equals?
-                                                      (->lift (->car (->variable 1 r)))
-                                                      (->car (->variable 3 s)))
-                                                     (->apply (->apply (->variable 0 matches)
-                                                                       (->cdr (->variable 1 r)))
-                                                              (->cdr (->variable 3 s)))
-                                                     (->lift (->literal 0)))))))
-                        (a b))))
+       (->lift (->apply (->lambda (->lambda (->if (->empty? (->variable 1 r)) (->lift (->literal 1)) (->if (->empty? (->variable 3 s)) (->lift (->literal 0)) (->if (->equals? (->lift (->car (->variable 1 r))) (->car (->variable 3 s))) (->apply (->apply (->variable 0 matches) (->cdr (->variable 1 r))) (->cdr (->variable 3 s))) (->lift (->literal 0))))))) (a b))))
+
+
+;; (print-pattern (matches-ab '(a b c)))
+
+;; (->run 0
+;;        (->lift (->apply (->lambda (->lambda
+;;                                    (->if (->empty? (->variable 1 r))
+;;                                          (->lift (->literal 1))
+;;                                          (->if (->empty? (->variable 3 s))
+;;                                                (->lift (->literal 0))
+;;                                                (->if (->equals?
+;;                                                       (->lift (->car (->variable 1 r)))
+;;                                                       (->car (->variable 3 s)))
+;;                                                      (->apply (->apply (->variable 0 matches)
+;;                                                                        (->cdr (->variable 1 r)))
+;;                                                               (->cdr (->variable 3 s)))
+;;                                                      (->lift (->literal 0)))))))
+;;                         (a b))))
