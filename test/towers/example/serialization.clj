@@ -1,3 +1,12 @@
+(ns towers.example.serialization
+  (:require [towers.clojure.generator :as clj-gen]
+            [towers.ir.ast :as ir-ast]
+            [towers.ir.parser :as ir-parser]
+            [towers.ir.core :refer [lift run]]
+            [towers.ir.interpreter :refer [evalmsg]]
+            [towers.ir.generator :as ir-gen]
+            [meliae.patterns :refer [print-pattern]]))
+
 ;; TODO understand loop-recur
 ;; TODO how do we lift loops?
 ;; TODO tail call elimination
@@ -9,43 +18,46 @@
 ;; TODO partial application of functions
 
 (def matches
-  (parse (fn matches [r s]
-           (if (seq r)
-             (if (seq s)
-               (if (= (lift (first r))
-                      (first s))
-                 (matches (rest r) (rest s))
-                 (lift false))
-               (lift false))
-             (lift true)))))
+  (ir-parser/parse (fn matches [r s]
+                     (if (seq r)
+                       (if (seq s)
+                         (if (= (lift (first r))
+                                (first s))
+                           (matches (rest r) (rest s))
+                           (lift false))
+                         (lift false))
+                       (lift true)))))
 
-(meliae.patterns/print-pattern (towers.ir.interpreter/evalmsg [] (->run (->literal 0) (->lift (->apply matches (->quote '(a b)))))))
+(meliae.patterns/print-pattern matches)
 
-
- (clojure.pprint/pprint (towers.ir.generator/generate (towers.ir.interpreter/evalmsg [] (->run (->literal 0) (->lift (->apply matches (->quote '(a b))))))
-                                                      nil))
+(print-pattern (evalmsg [] (ir-ast/->run (ir-ast/->literal 0) (ir-ast/->lift (ir-ast/->apply matches (ir-ast/->quote '(a b)))))))
 
 
- (meliae.patterns/print-pattern matches)
+(clojure.pprint/pprint
+ (clj-gen/generate
+  (ir-gen/generate
+   (evalmsg []
+            (ir-ast/->run (ir-ast/->literal 0) (ir-ast/->lift (ir-ast/->apply matches (ir-ast/->quote '(a b))))))
+   nil)))
 
 
- (parse (fn write-formatted! [format output data]
-          (condp #(= %1 %2) (::type format)
-            ;; TODO this could be a multi-method
-            ::primitive (condp = (::primitive-type format)
-                          ;; TODO this could be a multi-method
-                          ::int8 (lift (.writeByte output (int data))) ;; the int-cast is not a mistake, check the signature
-                          ::int64 (lift (.writeLong output (long data))))
-            ::record (loop [attributes (::attributes format)
-                            data data]
-                       (when (seq attributes)
-                         (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
-                           (write-formatted! attribute-format output (get data attribute-name))
-                           (recur (rest attributes) data))))
-            ::vector (let [{:keys [::index-format ::value-format]} format]
-                       (write-formatted! index-format output (count data))
-                       (doseq [item data]
-                         (write-formatted! value-format output item))))))
+(parse (fn write-formatted! [format output data]
+         (condp #(= %1 %2) (::type format)
+           ;; TODO this could be a multi-method
+           ::primitive (condp = (::primitive-type format)
+                         ;; TODO this could be a multi-method
+                         ::int8 (lift (.writeByte output (int data))) ;; the int-cast is not a mistake, check the signature
+                         ::int64 (lift (.writeLong output (long data))))
+           ::record (loop [attributes (::attributes format)
+                           data data]
+                      (when (seq attributes)
+                        (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
+                          (write-formatted! attribute-format output (get data attribute-name))
+                          (recur (rest attributes) data))))
+           ::vector (let [{:keys [::index-format ::value-format]} format]
+                      (write-formatted! index-format output (count data))
+                      (doseq [item data]
+                        (write-formatted! value-format output item))))))
 
 (parse (fn read-formatted! [format input]
          (condp = (::type format)

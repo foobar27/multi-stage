@@ -2,6 +2,9 @@
   (:require [clojure.spec.alpha :as s]
             [meliae.patterns :refer [defmultipattern defpatterns match*]]))
 
+(s/def ::signature
+  (s/keys :req-un [::args ::bodies]))
+
 (defmultipattern expression)
 (defpatterns expression
   literal  [value any?]
@@ -9,14 +12,23 @@
   let*     [bindings (coll-of ::let-binding) bodies (coll-of ::expression)]
   do       [bodies (coll-of ::expression)]
   if       [condition ::expression then ::expression else ::expression]
+  fn*      [name symbol? signatures (coll-of ::signatures)]
   invoke   [function ::expression args (coll-of ::expression)])
+
+(declare smart-if)
+
+(s/fdef smart-literal
+  :args (s/cat :value any?)
+  :ret  ::expression)
+(defn smart-literal [value]
+  (->literal value))
 
 ;; TODO document guarantees
 (s/fdef smart-do
   :args (s/cat :bodies (s/coll-of ::expression))
   :ret ::expression)
 (defn smart-do [bodies]
-  (match* [bodies]
+  (match* [(vec bodies)]
     ;; No body, return nil literal.
     [[]]
     (->literal nil)
@@ -46,34 +58,44 @@
                :bodies   (s/coll-of ::expression))
   :ret ::expression)
 (defn smart-let* [bindings bodies]
-  (if (seq bindings)
-    (match* [bodies]
+  ;; Simplify bodies, it's easier to reason about a single body.
+  (let [body (smart-do bodies)]
+    (if (seq bindings)
+      (let [[last-binding-sym last-binding-expr] (last bindings)]
+        (match* [body]
 
-      ;; One single nested let* expression, merge into current expression.
-      ;; Simplify bodies2, but do not recur smart-let*.
-      [[(->let* bindings2 bodies2)]]
-      (->let* (concat bindings bindings2) (smart-do bodies2))
+          ;; One single nested let* expression, merge into current expression.
+          [(->let* bindings2 bodies2)]
+          (->let* (concat bindings bindings2)
+            [(smart-do bodies2)])
 
-      ;; One single do expression, eliminate.
-      ;; Recur, because the bodies might contain another let*.
-      [[(->do bodies2)]]
-      (smart-let* bindings bodies2)
+          ;; (let [... x 1] x)
+          [(->variable last-binding-sym)]
+          (smart-let* (drop-last bindings)
+            [last-binding-expr])
 
-      ;; A single expression (neither let* nor do).
-      ;; This will be the single body of the new let*.
-      ;; TODO do we need recursion?
-      [[expression]]
-      (->let* bindings expression)
+          ;; (let [... x 1] (if x then else))
+          [(->if (->variable last-binding-sym)
+                 then
+                 else)]
+          (smart-let* (drop-last bindings)
+            [(smart-if last-binding-expr
+                       then
+                       else)])
+          
+          ;; One single nested do expression, replace by implicit do.
+          ;; No need to recur, if there has been a single nested let*,
+          ;; it would be equal to body.
+          [(->do bodies2)]
+          (->let* bindings bodies2)
 
-      ;; Zero, or more than one bodies.
-      ;; Flatten nested do blocks via the smart-do constructor, then recur.
-      ;; This will always return a single expression (a do, a let*, a nil literal or some other block).
-      ;; Thus it will match another case of this match* statement,
-      ;; and thus not lead to an infinite recursion.
-      [_]
-      (smart-let* bindings (smart-do bodies)))
-    ;; No bindings, consider as a do-block.
-    (smart-do bodies)))
+          ;; A single expression (neither let* nor do).
+          ;; This will be the single body of the new let*.
+          ;; TODO do we need recursion?
+          [expression]
+          (->let* bindings [expression])))
+      ;; No bindings, consider as a do-block.
+      body)))
 
 (s/fdef smart-if
   :args (s/alt :condition-then      (s/cat :condition ::expression
@@ -86,4 +108,36 @@
   ([condition then]
    (smart-if condition then (->literal nil)))
   ([condition then else]
-   (->if condition then else)))
+   (->if condition
+         then
+         else)))
+
+(s/fdef smart-invoke
+  :args (s/cat :f (s/alt :symbol symbol?
+                         :lambda ::expression)
+               :args (s/coll-of ::expression))
+  :ret ::expression)
+(defn smart-invoke [f args]
+  (->invoke (smart-do [f])
+            (doall (map #(smart-do [%]) args))))
+
+(s/fdef smart-variable
+  :args (s/cat :sym symbol?)
+  :ret ::expression)
+(defn smart-variable [sym]
+  (->variable sym))
+
+;; TODO implicit do
+(s/fdef smart-fn*
+  :args (s/alt :named   (s/cat :sym symbol?
+                               :signatures (s/+ ::signature))
+               :unnamed (s/cat :sigantures (s/+ ::signature)))
+  :ret ::expression)
+(defn smart-fn* [& chunks]
+  (let [named-variant? (symbol? (first chunks))
+        name (if named-variant?
+               (first chunks))
+        signatures (if named-variant?
+                     (rest chunks)
+                     chunks)]
+    (->fn* name signatures)))

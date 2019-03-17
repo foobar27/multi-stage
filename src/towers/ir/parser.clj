@@ -2,13 +2,8 @@
   (:require [towers.ir.ast :refer  [->literal ->variable ->do ->let ->lambda ->apply ->if ->lift ->run ->primitive-call ->quote]]
             [clojure.walk :refer [macroexpand-all]]
             [towers.utils :refer [resolve-symbol]]
-            [towers.clojure.parser :refer [destructure-clj]]))
-
-(defn lift [& args]
-  (throw (IllegalStateException. "Must be in parsed block")))
-
-(defn run [& args]
-  (throw (IllegalStateException. "Must be in parsed block")))
+            [towers.clojure.parser :refer [destructure-clj]]
+            [towers.ir.core :refer [lift run]]))
 
 (defn- get-var [sym->index s]
   (if-let [i (get sym->index s)]
