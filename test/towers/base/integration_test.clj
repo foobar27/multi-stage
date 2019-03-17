@@ -89,24 +89,24 @@
                     (rest s))
            (lift 0)))))))
 
-
 (defn matches-ab [x]
   ;; TODO need to run the interpreter
   ;; TODO re-write into clojure-like syntax (needs to lookup the definition of "matches" somewhere)
   (->run (->literal 0) (->lift (->apply matches '(a b)))))
 
-(print-pattern (matches-ab [\a \b]))
+(comment
+  (print-pattern (matches-ab [\a \b]))
 
-(evalmsg #{}
-         (->run (->lambda (->literal 0)) (->literal 42)))
+  (evalmsg #{}
+           (->run (->lambda (->literal 0)) (->literal 42)))
 
-(evalmsg #{}
-         (->run (->literal 0) (->lift (->apply matches (->literal ('a 'b))))))
+  (evalmsg #{}
+           (->run (->literal 0) (->lift (->apply matches (->literal ('a 'b))))))
 
-(print-pattern (->run 0 (->lift (->apply matches '(a b)))))
+  (print-pattern (->run 0 (->lift (->apply matches '(a b)))))
 
-(->run 0
-       (->lift (->apply (->lambda (->lambda (->if (->empty? (->variable 1 r)) (->lift (->literal 1)) (->if (->empty? (->variable 3 s)) (->lift (->literal 0)) (->if (->equals? (->lift (->car (->variable 1 r))) (->car (->variable 3 s))) (->apply (->apply (->variable 0 matches) (->cdr (->variable 1 r))) (->cdr (->variable 3 s))) (->lift (->literal 0))))))) (a b))))
+  (->run 0
+         (->lift (->apply (->lambda (->lambda (->if (->empty? (->variable 1 r)) (->lift (->literal 1)) (->if (->empty? (->variable 3 s)) (->lift (->literal 0)) (->if (->equals? (->lift (->car (->variable 1 r))) (->car (->variable 3 s))) (->apply (->apply (->variable 0 matches) (->cdr (->variable 1 r))) (->cdr (->variable 3 s))) (->lift (->literal 0))))))) (a b)))))
 
 
 ;; (print-pattern (matches-ab '(a b c)))

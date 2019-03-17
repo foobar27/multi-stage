@@ -4,7 +4,7 @@
             [towers.base.ast :refer [;; expression ctors
                                      ->literal ->variable ->lambda ->apply ->cons ->let ->if
                                      ->plus ->minus ->times ->divide ->lift ->run ->car ->cdr ->cons ->literal?
-                                     ->cons? ->empty? ->gt ->lt
+                                     ->cons? ->empty? ->gt ->lt 
                                      ;; expression predicates
                                      literal? code? cons? code? closure? ->number? ->symbol?
                                      ;; value ctors
@@ -261,6 +261,3 @@
   :ret  ::ast/expression)
 (defn evalmsg [env e]
   (reifyv #(evalms env e)))
-
-;; TODO optimizer for expressions
-

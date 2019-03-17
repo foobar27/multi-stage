@@ -1,10 +1,10 @@
 (ns towers.base.parser
   (:require [towers.base.ast :refer [->literal ->lambda ->let ->variable ->cons ->plus ->minus ->times ->divide ->apply ->if
                                      ->nil? ->equals? ->TRUE ->FALSE ->NIL ->car ->cdr ->empty? ->number? ->symbol?
-                                     ->lift ->gt]]
+                                     ->lift ->gt ->run]]
             [clojure.walk :refer [macroexpand-all]]
             [towers.utils :refer [resolve-symbol]]
-            [towers.clojure-parser :refer [destructure-fn*]]))
+            [towers.clojure.parser :refer [destructure-clj*]]))
 
 (defn- get-var [sym->index s]
   (if-let [i (get sym->index s)]
@@ -81,7 +81,7 @@
    `number?  ->number?
    `symbol? ->symbol?
    `>      ->gt
-   `towers.base.interpreter/lift   ->lift
+   `towers.base.interpreter/lift   ->lift ;; TODO this should be in a different namespace (e.g. towers.base.language)
    `true   ->TRUE
    `false  ->FALSE
    `nil    ->NIL})
@@ -153,7 +153,7 @@
     (push-var :y))
 
 (defmethod sexp->expression-unresolved-dispatch 'fn* [_ args sym->index]
-  (destructured-fn*->expression (destructure-fn* args) sym->index))
+  (destructured-fn*->expression (destructure-clj* 'fn* args) sym->index))
 
 (defmethod sexp->expression-unresolved-dispatch 'let* [_ args sym->index]
   (let [[bindings body] args
@@ -179,6 +179,10 @@
 
 (defmethod sexp->expression-unresolved-dispatch 'quote [_ args sym->index]
   (reduce #(->cons %2 %1) nil (reverse args)))
+
+;; TODO shouldn't this be 'resolved'?
+(defmethod sexp->expression-unresolved-dispatch 'run [_ args sym->index]
+  (apply ->run (map #(sexp->expression % sym->index) args)))
 
 (defn clj->expression [code]
   (let [code (macroexpand-all code)]
