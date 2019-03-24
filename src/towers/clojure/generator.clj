@@ -2,47 +2,64 @@
   (:require [towers.clojure.ast :refer [->do ->let* ->fn* ->literal ->variable ->if ->invoke] :as ast]
             [meliae.patterns :refer [match*]]))
 
-(defn generate [e]
-  (match* [e]
-    
-    [(->literal value)]
-    (if ((some-fn number? string? keyword? boolean?) value)
-      value
-      `(quote ~value))
+(defn generate
+  ([e]
+   (generate e nil))
+  ([e recur-target]
+   (match* [e]
+     
+     [(->literal value)]
+     (if ((some-fn number? string? keyword? boolean?) value)
+       value
+       `(quote ~value))
 
-    [(->let* bindings bodies)]
-    `(let* [~@(doall (mapcat (fn [[sym expr]]
-                               [sym (generate expr)])
-                             bindings))]
-       ~@(doall (map generate bodies)))
+     [(->let* bindings bodies)]
+     ;; recur-target might be shadowed by any binding.
+     ;; Shadowing should never happen for code generated from "ir",
+     ;; but we want to be sure to reset the recur target in such cases.
+     (let [binding-recur-targets (reductions (fn [recur-target b]
+                                               (if-not b recur-target))
+                                             recur-target
+                                             (for [[sym _] bindings]
+                                               (= sym recur-target)))
+           recur-target (last binding-recur-targets)]
+       `(let* [~@(doall (mapcat (fn [[sym expr] recur-target]
+                                  [sym (generate expr recur-target)])
+                                bindings
+                                binding-recur-targets))]
+          ~@(doall (map #(generate % recur-target) bodies))))
 
-    [(->do bodies)]
-    `(do ~@(doall (map generate bodies)))
+     [(->do bodies)]
+     `(do ~@(doall (map #(generate % recur-target) bodies)))
+     
+     [(->if condition then (->literal nil))]
+     `(if ~(generate condition recur-target)
+        ~(generate then recur-target))
 
-    [(->if condition then (->literal nil))]
-    `(if ~(generate condition)
-       ~(generate then))
+     [(->if condition then else)]
+     `(if ~(generate condition recur-target)
+        ~(generate then recur-target)
+        ~(generate else recur-target))
 
-    [(->if condition then else)]
-    `(if ~(generate condition)
-       ~(generate then)
-       ~(generate else))
+     [(->variable symbol)]
+     symbol
 
-    [(->variable symbol)]
-    symbol
+     [(->invoke f args tail-call?)]
+     (if (and tail-call?
+              (= f recur-target))
+       ;; TODO the string-to-symbol conversion is a workaround to an alegded clojure bug
+       `(~(symbol "recur") ~@(doall (map #(generate % recur-target) args)))
+       `(~(generate f recur-target) ~@(doall (map #(generate % recur-target) args))))
 
-    [(->invoke f args)]
-    `(~(generate f) ~@(doall (map generate args)))
-
-    [(->fn* f-name signatures)]
-    (if (= 1 (count signatures))
-      ;; Use simplified form if only one signature.
-      `(fn* ~f-name
-            ~(let [{:keys [args bodies]} (first signatures)]
-               `([~@args]
-                 ~@(doall (map generate bodies)))))
-      ;; Use variadic form if more than one signature
-      `(fn* ~f-name
-            ~@(doall (for [{:keys [args bodies]} signatures]
-                       `([~@args]
-                         ~@(doall (map generate bodies)))))))))
+     [(->fn* f-name signatures)]
+     (if (= 1 (count signatures))
+       ;; Use simplified form if only one signature.
+       `(fn* ~f-name
+             ~(let [{:keys [args bodies]} (first signatures)]
+                `([~@args]
+                  ~@(doall (map #(generate % f-name) bodies)))))
+       ;; Use variadic form if more than one signature
+       `(fn* ~f-name
+             ~@(doall (for [{:keys [args bodies]} signatures]
+                        `([~@args]
+                          ~@(doall (map #(generate % f-name) bodies))))))))))

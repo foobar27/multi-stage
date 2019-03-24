@@ -1,4 +1,5 @@
-(ns towers.clojure.parser)
+(ns towers.clojure.parser
+  (:require [towers.clojure.ast :refer [smart-do smart-let* smart-fn* smart-invoke smart-literal]]))
 
 (defmulti destructure-clj (fn [sym args] sym))
 
@@ -44,3 +45,4 @@
                             (vec [(count (:args arity)) arity])))]
     {:name name
      :arities arities}))
+
