@@ -75,7 +75,7 @@
 (defmethod destructured-sexp->ir 'let* [_ {:keys [bindings bodies]} sym->index]
   (if-let [[[k v] & bindings] bindings]
     (let [v (sexp->ir v sym->index) ;; must be done with the old sym->index
-          sym->index (push-var sym->index v)]
+          sym->index (push-var sym->index k)]
       (->let v
              (destructured-sexp->ir 'let* {:bindings bindings ;; remaining bindings
                                            :bodies bodies}
