@@ -19,7 +19,7 @@
 (defmulti destructured-sexp->ir (fn [sym destructured sym->index]
                                   sym))
 
-(def primitive-fns #{`get `seq `first `rest `= `int `long `str})
+(def primitive-fns #{`get `seq `seq? `first `rest `= `int `long `str})
 
 (defn sexp->ir [sexp sym->index]
   (cond
@@ -83,6 +83,32 @@
     ;; base case of recursion (implicit do)
     (destructured-sexp->ir 'do {:bodies bodies} sym->index)))
 
+(defmethod destructured-sexp->ir 'loop* [_ {:keys [bindings bodies]} sym->index]
+  ;; TODO this is more or less copy & paste of function application
+  (let [f (destructured-sexp->ir 'fn*
+                                 {:name (gensym "loop")
+                                  :arities {(count bindings) {:args (vec (map first bindings))
+                                                              :bodies bodies}}}
+                                 sym->index)]
+    (reduce (fn [[f sym->index] [sym exp]]
+              [(->apply f exp) (push-var sym->index sym)])
+            [f sym->index]
+            bindings)))
+
+(comment
+  (loop [x1 v1
+         x2 v2
+         x3 v3]
+    body)
+
+  ((fn [x1 x2 x3]
+     body)
+   v1 v2 v3)
+  
+  (->apply (->apply (->apply f v1)
+                    v2)
+           v3))
+
 (defmethod destructured-sexp->ir 'fn* [_ {:keys [name arities]} sym->index]
   (let [name (or name (gensym "unnamed"))
         [_ {:keys [args & bodies]} & _] (first arities)] ;; TODO support multiple aritiess
@@ -113,7 +139,7 @@
 (comment
   (macroexpand `(.writeByte output (int data))))
 
-(defmethod destructured-sexp->ir '. [_ [object method-name & args] sym->index]
+(defmethod destructured-sexp->ir '. [_ [[object method-name & args]] sym->index]
   (->dot (sexp->ir object sym->index)
          method-name
          (doall (map #(sexp->ir % sym->index) args))))
