@@ -24,6 +24,9 @@
 (defmethod destructure-clj '. [_ args]
   args)
 
+(defmethod destructure-clj 'new [_ args]
+  args)
+
 (defmethod destructure-clj 'throw [_ args]
   {:exception args})
 

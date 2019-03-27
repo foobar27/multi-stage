@@ -1,5 +1,5 @@
 (ns towers.ir.parser
-  (:require [towers.ir.ast :refer  [->literal ->variable ->do ->let ->lambda ->apply ->dot
+  (:require [towers.ir.ast :refer  [->literal ->variable ->do ->let ->lambda ->apply ->dot ->new
                                     ->if ->lift ->run ->primitive-call ->quote ->throw]]
             [clojure.walk :refer [macroexpand-all]]
             [towers.utils :refer [resolve-symbol]]
@@ -116,6 +116,10 @@
 (defmethod destructured-sexp->ir '. [_ [object method-name & args] sym->index]
   (->dot (sexp->ir object sym->index)
          method-name
+         (doall (map #(sexp->ir % sym->index) args))))
+
+(defmethod destructured-sexp->ir 'new [_ [class-name & args] sym->index]
+  (->new class-name
          (doall (map #(sexp->ir % sym->index) args))))
 
 (defmethod destructured-sexp->ir 'throw [_ {:keys [exception]} sym->index]
