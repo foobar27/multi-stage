@@ -24,6 +24,9 @@
 (defmethod destructure-clj '. [_ args]
   args)
 
+(defmethod destructure-clj 'throw [_ args]
+  {:exception args})
+
 (comment ;; examples for fn*
   (([x] (clojure.core/+ x 1)))
   ([x] (clojure.core/+ x 1)))
