@@ -10,6 +10,7 @@
   literal  [value any?]
   variable [symbol symbol?]
   let*     [bindings (coll-of ::let-binding) bodies (coll-of ::expression)]
+  loop*    [bindings (coll-of ::let-binding) bodies (coll-of ::expression)]
   do       [bodies (coll-of ::expression)]
   if       [condition ::expression then ::expression else ::expression]
   fn*      [name symbol? signatures (coll-of ::signatures)]

@@ -21,6 +21,9 @@
      ;; else is nil by default. This is expected.
      :else else}))
 
+(defmethod destructure-clj '. [_ args]
+  args)
+
 (comment ;; examples for fn*
   (([x] (clojure.core/+ x 1)))
   ([x] (clojure.core/+ x 1)))

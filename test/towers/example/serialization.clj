@@ -40,12 +40,70 @@
             (ir-ast/->run (ir-ast/->literal 0) (ir-ast/->lift (ir-ast/->apply matches (ir-ast/->quote '(a b))))))
    nil)))
 
+;; TODO support loop*
+;; TODO support dot forms
+;; TODO support throw
+(fn write-formatted!
+  [FORMAT output data]
+  (let* [PRED__38802 (fn [p1__38800# p2__38801#]
+                       (= p1__38800# p2__38801#))
+         EXPR__38803 (::type FORMAT)]
+    (if (PRED__38802 ::primitive EXPR__38803)
+      (let* [PRED__38804 (fn [p1__38800# p2__38801#]
+                           (= p1__38800# p2__38801#))
+             EXPR__38805 (::primitive-type FORMAT)]
+        (if (PRED__38804 ::int8 EXPR__38805)
+          (lift (. output writeByte (int data)))
+          (if (PRED__38804 ::int64 EXPR__38805)
+            (lift (. output writeLong (long data)))
+            (throw (new java.lang.IllegalArgumentException (str "No matching clause:"  EXPR__38805))))))
+      (if (PRED__38802 ::record EXPR__38803)
+        (loop* [ATTRIBUTES (::attributes FORMAT)
+                data data]
+               (if (seq ATTRIBUTES)
+                 (let* [MAP__38806 (first ATTRIBUTES)
+                        MAP__38806 (if (seq? map__38806)
+                                     (. clojure.lang.PersistentHashMap create (seq MAP__38806))
+                                     MAP__38806)
+                        ATTRIBUTE-NAME (get MAP__38806 ::attribute-name)
+                        ATTRIBUTE-FORMAT (get MAP__38806 ::attribute-format)]
+                   (write-formatted! attribute-format output (get data ATTRIBUTE-NAME))
+                   (recur (rest ATTRIBUTES) data))))
+        (if (PRED__38802 ::vector EXPR__38803)
+          (let* [MAP__38807 FORMAT
+                 MAP__38807 (if (seq? MAP__38807)
+                              (. clojure.lang.PersistentHashMap create (seq MAP__38807))
+                              MAP__38807)
+                 INDEX_FORMAT (get MAP__38807 ::index-format)
+                 VALUE-FORMAT (get MAP__38807 ::value-format)]
+            (write-formatted! INDEX-FORMAT output (count data))
+            (loop* [seq_38808 (seq data)
+                    chunk_38809 nil
+                    count_38810 0
+                    i_38811 0]
+                   (if (< i_38811 count_38810)
+                     (let* [item (. chunk_38809 nth i_38811)]
+                       (write-formatted! VALUE-FORMAT output item)
+                       (recur seq_38808 chunk_38809 count_38810 (unchecked-inc i_38811)))
+                     (let* [temp__5720__auto__ (seq seq_38808)]
+                       (when temp__5720__auto__
+                         (let* [seq_38808 temp__5720__auto__]
+                           (if (chunked-seq? seq_38808)
+                             (let* [c__5983__auto__ (chunk-first seq_38808)]
+                               (recur (chunk-rest seq_38808)
+                                      c__5983__auto__
+                                      (int (count c__5983__auto__))
+                                      (int 0)))
+                             (let* [item (first seq_38808)]
+                               (write-formatted! VALUE-FORMAT output item)
+                               (recur (next seq_38808) nil 0 0)))))))))
+          (throw (new java.lang.IllegalArgumentException (str "No matching clause:" EXPR__38803))))))))
 
 (ir-parser/parse
  (fn write-formatted! [format output data]
    (condp #(= %1 %2) (::type format)
      ;; TODO this could be a multi-method
-     ::primitive (condp = (::primitive-type format)
+     ::primitive (condp #(= %1 %2) (::primitive-type format)
                    ;; TODO this could be a multi-method
                    ::int8 (lift (.writeByte output (int data))) ;; the int-cast is not a mistake, check the signature
                    ::int64 (lift (.writeLong output (long data))))
@@ -57,8 +115,9 @@
                     (recur (rest attributes) data))))
      ::vector (let [{:keys [::index-format ::value-format]} format]
                 (write-formatted! index-format output (count data))
-                (doseq [item data]
-                  (write-formatted! value-format output item))))))
+                (lift
+                 (doseq [item data]
+                   (write-formatted! value-format output item)))))))
 
 (parse (fn read-formatted! [format input]
          (condp = (::type format)

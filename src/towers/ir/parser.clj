@@ -1,5 +1,6 @@
 (ns towers.ir.parser
-  (:require [towers.ir.ast :refer  [->literal ->variable ->do ->let ->lambda ->apply ->if ->lift ->run ->primitive-call ->quote]]
+  (:require [towers.ir.ast :refer  [->literal ->variable ->do ->let ->lambda ->apply ->dot
+                                    ->if ->lift ->run ->primitive-call ->quote]]
             [clojure.walk :refer [macroexpand-all]]
             [towers.utils :refer [resolve-symbol]]
             [towers.clojure.parser :refer [destructure-clj]]
@@ -18,7 +19,7 @@
 (defmulti destructured-sexp->ir (fn [sym destructured sym->index]
                                   sym))
 
-(def primitive-fns #{`get `seq `first `rest `=})
+(def primitive-fns #{`get `seq `first `rest `= `int `long `str})
 
 (defn sexp->ir [sexp sym->index]
   (cond
@@ -53,7 +54,6 @@
                (->primitive-call resolved-f parsed-args))))))
        ;; Function call
        (when-let [resolved-f (sexp->ir f sym->index)]
-         ;; TODO this should be reduce ->apply
          (let [args (or (seq (map #(sexp->ir % sym->index) args))
                         ;; no-arg functions get an implicit nil-argument
                         [(->literal nil)])]
@@ -110,12 +110,16 @@
         (sexp->ir then      sym->index)
         (sexp->ir else      sym->index)))
 
+(comment
+  (macroexpand `(.writeByte output (int data))))
+
+(defmethod destructured-sexp->ir '. [_ [object method-name & args] sym->index]
+  (->dot (sexp->ir object sym->index)
+         method-name
+         (doall (map #(sexp->ir % sym->index) args))))
+
 (defn clj->ir [sexp]
   (sexp->ir (macroexpand-all sexp) {}))
 
 (defmacro parse [sexp]
   (clj->ir sexp))
-
-
-
-

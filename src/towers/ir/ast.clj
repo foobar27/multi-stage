@@ -21,6 +21,7 @@
   let       [e1 ::expression e2 ::expression]
   lambda    [e ::expression]
   apply     [e1 ::expression arguments (s/coll-of ::expression)]
+  dot       [object :expression method-name symbol? arguments (s/coll-of :expression)]
   quote     [form ::expression]
   do        [args (s/coll-of ::expression)]
   if        [c ::expression a ::expression b ::expression]
