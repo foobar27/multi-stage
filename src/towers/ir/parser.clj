@@ -19,7 +19,7 @@
 (defmulti destructured-sexp->ir (fn [sym destructured sym->index]
                                   sym))
 
-(def primitive-fns #{`get `seq `seq? `first `rest `= `int `long `str})
+(def primitive-fns #{`get `seq `seq? `first `rest `= `int `long `str `count})
 
 (defn sexp->ir [sexp sym->index]
   (cond

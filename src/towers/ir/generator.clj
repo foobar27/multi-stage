@@ -1,5 +1,7 @@
 (ns towers.ir.generator
-  (:require [towers.ir.ast :refer [->literal ->let ->if ->primitive-call ->variable ->closure] :as ast]
+  (:require [towers.ir.ast :refer [->literal ->let ->if ->primitive-call ->variable ->closure
+                                   ->lambda ->dot ->new ->throw]
+             :as ast]
             [towers.clojure.ast :as clj]
             [meliae.patterns :refer [match*]]))
 
@@ -30,6 +32,28 @@
                                                            " with original name " original-name))))]
         (clj/smart-variable sym))
 
+      [(->lambda ee)]
+      (let [f-sym (gensym)
+            arg-sym (gensym)]
+        (clj/smart-fn* f-sym
+                       {:args [arg-sym]
+                        :bodies [(generate ee (conj index->sym f-sym arg-sym))]}))
+
+      [(->apply ff ee)]
+      (clj/->call (generate ff index->sym)
+                  [(generate ee index->sym)])
+
+      [(->dot object method-name arguments)]
+      (clj/->dot (generate object index->sym)
+                 method-name
+                 (vec (map #(generate % index->sym) arguments)))
+
+      [(->throw exception)]
+      (clj/->throw (generate exception index->sym))
+
+      [(->new class-name arguments)]
+      (clj/->new class-name (vec (map #(generate % index->sym) arguments)))
+      
       [(->closure env ee)]
       (if (seq env)
         (throw (IllegalArgumentException. "I have no idea how to translate a closure which is not at root level"))
@@ -38,6 +62,3 @@
           (clj/smart-fn* f-sym
                          {:args [arg-sym] ;; TODO support multiple arguments
                           :bodies [(generate ee (conj index->sym f-sym arg-sym))]}))))))
-
-;; TODO ->apply
-;; TODO ->lambda

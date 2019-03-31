@@ -15,6 +15,10 @@
   do       [bodies (coll-of ::expression)]
   if       [condition ::expression then ::expression else ::expression]
   fn*      [name symbol? signatures (coll-of ::signatures)]
+  call     [function ::expression arguments (coll-of ::expression)]
+  dot      [object ::expression method-name symbol? arguments (s/coll-of ::expression)]
+  new      [class-name symbol? arguments (s/coll-of ::expression)]
+  throw    [exception ::expression]
   invoke   [function ::expression args (coll-of ::expression) tail-call? boolean?])
 
 ;; TODO what about  "return nil" after tail call?

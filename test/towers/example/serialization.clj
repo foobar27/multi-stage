@@ -99,25 +99,25 @@
                                (recur (next seq_38808) nil 0 0)))))))))
           (throw (new java.lang.IllegalArgumentException (str "No matching clause:" EXPR__38803))))))))
 
-(ir-parser/parse
- (fn write-formatted! [format output data]
-   (condp #(= %1 %2) (::type format)
-     ;; TODO this could be a multi-method
-     ::primitive (condp #(= %1 %2) (::primitive-type format)
-                   ;; TODO this could be a multi-method
-                   ::int8 (lift (.writeByte output (int data))) ;; the int-cast is not a mistake, check the signature
-                   ::int64 (lift (.writeLong output (long data))))
-     ::record (loop [attributes (::attributes format)
-                     data data]
-                (when (seq attributes)
-                  (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
-                    (write-formatted! attribute-format output (get data attribute-name))
-                    (recur (rest attributes) data))))
-     ::vector (let [{:keys [::index-format ::value-format]} format]
-                (write-formatted! index-format output (count data))
-                (lift
-                 (doseq [item data]
-                   (write-formatted! value-format output item)))))))
+(let [ir (ir-parser/parse
+          (fn write-formatted! [format output data]
+            (condp #(= %1 %2) (get format ::type)
+              ;; TODO this could be a multi-method
+              ::primitive (condp #(= %1 %2) (::primitive-type format)
+                            ;; TODO this could be a multi-method
+                            ::int8 (.writeByte output (int data)) ;; the int-cast is not a mistake, check the signature
+                            ::int64 (.writeLong output (long data)))
+              ::record (loop [attributes (::attributes format)
+                              data data]
+                         (when (seq attributes)
+                           (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
+                             (write-formatted! attribute-format output (get data attribute-name))
+                             (recur (rest attributes) data))))
+              ::vector (let [{:keys [::index-format ::value-format]} format]
+                         (write-formatted! index-format output (count data))
+                         (doseq [item data]
+                           (write-formatted! value-format output item))))))]
+  (clj-gen/generate (ir-gen/generate ir nil)))
 
 (parse (fn read-formatted! [format input]
          (condp = (::type format)
