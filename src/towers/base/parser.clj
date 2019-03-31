@@ -4,7 +4,7 @@
                                      ->lift ->gt ->run]]
             [clojure.walk :refer [macroexpand-all]]
             [towers.utils :refer [resolve-symbol]]
-            [towers.clojure.parser :refer [destructure-clj*]]))
+            [towers.clojure.parser :refer [destructure-clj]]))
 
 (defn- get-var [sym->index s]
   (if-let [i (get sym->index s)]
@@ -148,12 +148,8 @@
                                                                          :body body}}}
                                                 sym->index))))))
 
-(-> {:a 0}
-    (push-var :x)
-    (push-var :y))
-
 (defmethod sexp->expression-unresolved-dispatch 'fn* [_ args sym->index]
-  (destructured-fn*->expression (destructure-clj* 'fn* args) sym->index))
+  (destructured-fn*->expression (destructure-clj 'fn* args) sym->index))
 
 (defmethod sexp->expression-unresolved-dispatch 'let* [_ args sym->index]
   (let [[bindings body] args

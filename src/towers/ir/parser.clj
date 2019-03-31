@@ -1,6 +1,6 @@
 (ns towers.ir.parser
   (:require [towers.ir.ast :refer  [->literal ->variable ->do ->let ->lambda ->apply ->dot ->new
-                                    ->if ->lift ->run ->primitive-call ->quote ->throw]]
+                                    ->if ->lift ->run ->primitive-call ->quote ->throw ->class-reference]]
             [clojure.walk :refer [macroexpand-all]]
             [towers.utils :refer [resolve-symbol]]
             [towers.clojure.parser :refer [destructure-clj]]
@@ -33,6 +33,8 @@
     
     (symbol? sexp)
     (or (get-var sym->index sexp)
+        (if (class? (resolve sexp ))
+          (->class-reference sexp))
         (throw (IllegalArgumentException. (str "Unknown symbol: " sexp))))
 
     (seq? sexp)

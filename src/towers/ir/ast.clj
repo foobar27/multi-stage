@@ -18,6 +18,7 @@
 (defpatterns expression
   literal   [n any?]
   variable  [level ::integer original-name ::string]
+  class-reference [class-name symbol?]
   let       [e1 ::expression e2 ::expression]
   lambda    [e ::expression]
   apply     [e1 ::expression arguments (s/coll-of ::expression)]
