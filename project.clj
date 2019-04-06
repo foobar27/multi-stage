@@ -9,5 +9,5 @@
                  [org.clojure/test.check "0.10.0-alpha3"] ;; TODO test only
                  
                  ^{:voom {:repo "https://github.com/foobar27/meliae" :branch "master"}} ;; TODO fixed version
-                 [com.github.foobar27/meliae "0.1.0-20181223_121930-g74cf647"]]
+                 [com.github.foobar27/meliae "0.1.0-20190406_160303-g7772abc"]]
   :repl-options {:init-ns towers.core})

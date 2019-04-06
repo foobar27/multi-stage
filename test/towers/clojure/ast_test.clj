@@ -1,6 +1,9 @@
 (ns towers.clojure.ast-test
   (:require [clojure.test :refer :all]
+            [clojure.spec.test.alpha :as stest]
             [towers.clojure.ast :refer :all]))
+
+(stest/instrument (stest/enumerate-namespace 'towers.clojure.ast))
 
 (deftest test-smart-do
   (testing "empty bodies"
@@ -63,12 +66,14 @@
   (testing "undo let-insertion"
     (is (= (->invoke `+
                      [(->literal 4)
-                      (->literal 5)])
+                      (->literal 5)]
+                     false)
            (smart-let* [['x (->literal 4)]
                         ['y (->literal 5)]]
              [(->invoke `+
                         [(->variable 'x)
-                         (->variable 'y)])])))
+                         (->variable 'y)]
+                        false)])))
     )
   )
 

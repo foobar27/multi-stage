@@ -5,21 +5,25 @@
 (s/def ::signature
   (s/keys :req-un [::args ::bodies]))
 
+(s/def ::let-binding
+  (s/* (s/cat :symbol symbol?
+              :expression ::expression)))
+
 (defmultipattern expression)
 (defpatterns expression
   literal  [value any?]
   variable [symbol symbol?]
-  let*     [bindings (coll-of ::let-binding) bodies (coll-of ::expression)]
-  loop*    [bindings (coll-of ::let-binding) bodies (coll-of ::expression)]
+  let*     [bindings (s/coll-of ::let-binding) bodies (s/coll-of ::expression)]
+  loop*    [bindings (s/coll-of ::let-binding) bodies (s/coll-of ::expression)]
   throw    [exception ::expression]
-  do       [bodies (coll-of ::expression)]
+  do       [bodies (s/coll-of ::expression)]
   if       [condition ::expression then ::expression else ::expression]
-  fn*      [name symbol? signatures (coll-of ::signatures)]
-  call     [function ::expression arguments (coll-of ::expression)]
+  fn*      [name symbol? signatures (s/coll-of ::signature)]
+  call     [function ::expression arguments (s/coll-of ::expression)]
   dot      [object ::expression method-name symbol? arguments (s/coll-of ::expression)]
   new      [class-name symbol? arguments (s/coll-of ::expression)]
   throw    [exception ::expression]
-  invoke   [function ::expression args (coll-of ::expression) tail-call? boolean?])
+  invoke   [function ::expression args (s/coll-of ::expression) tail-call? boolean?])
 
 ;; TODO what about  "return nil" after tail call?
 ;; TODO this does not work if condition is a do/let/if-statement (with at least 2 bodies, the second one being a tail call)

@@ -23,14 +23,14 @@
   lambda    [e ::expression]
   apply     [e1 ::expression arguments (s/coll-of ::expression)]
   dot       [object ::expression method-name symbol? arguments (s/coll-of ::expression)]
-  new       [class-name symbol? args (coll-of ::expression)]
+  new       [class-name symbol? args (s/coll-of ::expression)]
   throw     [exception ::expression]
   quote     [form ::expression]
   do        [args (s/coll-of ::expression)]
   if        [c ::expression a ::expression b ::expression]
   lift      [e ::expression]
   run       [b ::expression e ::expression]
-  primitive-call [sym qualified-symbol? args (coll-of ::expression)])
+  primitive-call [sym qualified-symbol? args (s/coll-of ::expression)])
 
 (defmultipattern value)
 (defpatterns value

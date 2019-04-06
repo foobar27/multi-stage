@@ -59,7 +59,7 @@
          (let [args (or (seq (map #(sexp->ir % sym->index) args))
                         ;; no-arg functions get an implicit nil-argument
                         [(->literal nil)])]
-           (reduce ->apply resolved-f args)))
+           (reduce #(->apply %1 [%2]) resolved-f args)))
        (throw (IllegalArgumentException. "Unknown symbol: " f))))
 
     true
@@ -141,14 +141,14 @@
 (comment
   (macroexpand `(.writeByte output (int data))))
 
-(defmethod destructured-sexp->ir '. [_ [[object method-name & args]] sym->index]
+(defmethod destructured-sexp->ir '. [_ [object method-name & args] sym->index]
   (->dot (sexp->ir object sym->index)
          method-name
          (doall (map #(sexp->ir % sym->index) args))))
 
-(defmethod destructured-sexp->ir 'new [_ [class-name & args] sym->index]
+(defmethod destructured-sexp->ir 'new [_ {:keys [class-name arguments]} sym->index]
   (->new class-name
-         (doall (map #(sexp->ir % sym->index) args))))
+         (doall (map #(sexp->ir % sym->index) arguments))))
 
 (defmethod destructured-sexp->ir 'throw [_ {:keys [exception]} sym->index]
   (->throw (sexp->ir exception sym->index)))

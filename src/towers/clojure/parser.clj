@@ -21,16 +21,17 @@
      ;; else is nil by default. This is expected.
      :else else}))
 
-(defmethod destructure-clj '. [_ & args]
+(defmethod destructure-clj '. [_ args]
   args)
 
-(defmethod destructure-clj 'new [_ & args]
-  args)
+(defmethod destructure-clj 'new [_ [class-name & args]]
+  {:class-name class-name
+   :arguments args})
 
-(defmethod destructure-clj 'throw [_ & args]
+(defmethod destructure-clj 'throw [_ args]
   {:exception args})
 
-(defmethod destructure-clj 'loop* [_  bindings & bodies]
+(defmethod destructure-clj 'loop* [_ [bindings & bodies]]
   {:bindings (doall (map vec (partition 2 bindings)))
    :bodies bodies})
 
