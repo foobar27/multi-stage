@@ -1,11 +1,14 @@
 (ns towers.ir.generator
   (:require [towers.ir.ast :refer [->literal ->let ->if ->primitive-call ->variable ->closure
-                                   ->lambda ->dot ->new ->throw]
+                                   ->lambda ->dot ->new ->throw ->apply]
              :as ast]
             [towers.clojure.ast :as clj]
             [meliae.patterns :refer [match*]]))
 
 (defn generate [e index->sym]
+  (println "GENERATE")
+  (meliae.patterns/print-pattern e)
+  (println)
   (let [index->sym (vec index->sym)]
     (match* [e]
       

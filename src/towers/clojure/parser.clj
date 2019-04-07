@@ -21,6 +21,9 @@
      ;; else is nil by default. This is expected.
      :else else}))
 
+(defmethod destructure-clj 'recur [_ arguments]
+  {:arguments arguments})
+
 (defmethod destructure-clj '. [_ args]
   args)
 
