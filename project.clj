@@ -1,3 +1,4 @@
+
 (defproject towers "0.1.0-SNAPSHOT"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
@@ -5,7 +6,7 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.10.0"]
 
-                 [zprint "0.4.13"] ;; TODO test only
+                 [zprint "0.4.15"] ;; TODO test only
                  [org.clojure/test.check "0.10.0-alpha3"] ;; TODO test only
                  
                  ^{:voom {:repo "https://github.com/foobar27/meliae" :branch "master"}} ;; TODO fixed version

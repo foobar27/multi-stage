@@ -21,6 +21,7 @@
   fn*      [name symbol? signatures (s/coll-of ::signature)]
   call     [function ::expression arguments (s/coll-of ::expression)]
   dot      [object ::expression method-name symbol? arguments (s/coll-of ::expression)]
+  class-reference [class-name symbol?]
   new      [class-name symbol? arguments (s/coll-of ::expression)]
   throw    [exception ::expression]
   invoke   [function ::expression args (s/coll-of ::expression) tail-call? boolean?])

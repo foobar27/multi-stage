@@ -8,8 +8,8 @@
             [meliae.patterns :refer [print-pattern]]
             [clojure.spec.test.alpha :as stest]))
 
-(stest/instrument (stest/enumerate-namespace ['meliae.patterns 'towers.base.ast 'towers.clojure.ast
-                                              'towers.base.parser-test 'towers.ir.ast]))
+(stest/instrument (stest/enumerate-namespace ['meliae.patterns 'towers.ir.ast 'towers.clojure.ast
+                                              ]))
 
 ;; TODO understand loop-recur
 ;; TODO how do we lift loops?
@@ -103,6 +103,7 @@
                                (recur (next seq_38808) nil 0 0)))))))))
           (throw (new java.lang.IllegalArgumentException (str "No matching clause:" EXPR__38803))))))))
 
+
 (let [ir (ir-parser/parse
           (fn write-formatted! [format output data]
             (condp #(= %1 %2) (get format ::type)
@@ -125,59 +126,6 @@
   (meliae.patterns/print-pattern ir)
   (println)
   (clj-gen/generate (ir-gen/generate ir nil)))
-
-(->lambda
- (->lambda
-  (->lambda
-   (->let (->lambda (->lambda (->primitive-call clojure.core/= ((->variable 7 p1__18093#) (->variable 9 p2__18094#)))))
-          (->let (->primitive-call clojure.core/get ((->variable 1 format) (->literal :towers.example.serialization/type)))
-                 (->if (->apply (->apply (->variable 6 pred__18098) (->literal :towers.example.serialization/primitive)) (->variable 7 expr__18099))
-                       (->let (->lambda (->lambda (->primitive-call clojure.core/= ((->variable 9 p1__18095#) (->variable 11 p2__18096#)))))
-                              (->let (->apply (->literal :towers.example.serialization/primitive-type) (->variable 1 format))
-                                     (->if (->apply (->apply (->variable 8 pred__18100)
-                                                             (->literal :towers.example.serialization/int8)) (->variable 9 expr__18101))
-                                           (->dot (->variable 3 output) writeByte ((->primitive-call clojure.core/int ((->variable 5 data)))))
-                                           (->if (->apply (->apply (->variable 8 pred__18100) (->literal :towers.example.serialization/int64)) (->variable 9 expr__18101))
-                                                 (->dot (->variable 3 output) writeLong ((->primitive-call clojure.core/long
-                                                                                                           ((->variable 5 data)))))
-                                                 (->throw (->apply (->apply (->new (java.lang.IllegalArgumentException (clojure.core/str No matching clause:  expr__18101)) ()) (->literal nil)) (->literal nil)))))))
-                       (->if (->apply (->apply (->variable 6 pred__18098) (->literal :towers.example.serialization/record)) (->variable 7 expr__18099))
-                             [(->apply (->lambda (->literal nil))
-                                       (if (seq attributes)
-                                         (do (let* [map__18102 (first attributes) map__18102 (if (clojure.core/seq? map__18102) (. clojure.lang.PersistentHashMap create (clojure.core/seq map__18102)) map__18102) attribute-name (clojure.core/get map__18102 :towers.example.serialization/attribute-name) attribute-format (clojure.core/get map__18102 :towers.example.serialization/attribute-format)]
-                                               (write-formatted! attribute-format output (get data attribute-name))
-                                               (recur (rest attributes) data)))))
-                              {data 5,
-                               pred__18098 6,
-                               format 1,
-                               unnamed18109 4,
-                               [attributes (:towers.example.serialization/attributes format) data data] 8,
-                               write-formatted! 0,
-                               output 3,
-                               expr__18099 7,
-                               unnamed18108 2
-                               }]
-                             (->if (->apply (->apply (->variable 6 pred__18098) (->literal :towers.example.serialization/vector)) (->variable 7 expr__18099))
-                                   (->let (->variable 1 format)
-                                          (->let (->if (->primitive-call clojure.core/seq? ((->variable 8 map__18103)))
-                                                       (->dot (->class-reference clojure.lang.PersistentHashMap) create ((->primitive-call clojure.core/seq ((->variable 8 map__18103)))))
-                                                       (->variable 8 map__18103))
-                                                 (->let (->primitive-call clojure.core/get ((->variable 9 map__18103) (->literal :towers.example.serialization/index-format)))
-                                                        (->let (->primitive-call clojure.core/get ((->variable 9 map__18103) (->literal :towers.example.serialization/value-format)))
-                                                               (->do ((->apply (->apply (->apply (->variable 0 write-formatted!) (->variable 9 index-format)) (->variable 3 output))
-                                                                               (->primitive-call clojure.core/count ((->variable 5 data))))
-                                                                      [(->apply (->lambda (->literal nil))
-                                                                                (if (clojure.core/< i_18107 count_18106)
-                                                                                  (let* [item (. chunk_18105 nth i_18107)]
-                                                                                    (do (write-formatted! value-format output item))
-                                                                                    (recur seq_18104 chunk_18105
-                                                                                           count_18106 (clojure.core/unchecked-inc i_18107)))
-                                                                                  (let* [temp__5720__auto__ (clojure.core/seq seq_18104)]
-                                                                                    (if temp__5720__auto__
-                                                                                      (do (let* [seq_18104 temp__5720__auto__]
-                                                                                            (if (clojure.core/chunked-seq? seq_18104)
-                                                                                              (let* [c__5983__auto__ (clojure.core/chunk-first seq_18104)] (recur (clojure.core/chunk-rest seq_18104) c__5983__auto__ (clojure.core/int (clojure.core/count c__5983__auto__)) (clojure.core/int 0))) (let* [item (clojure.core/first seq_18104)] (do (write-formatted! value-format output item)) (recur (clojure.core/next seq_18104) nil 0 0))))))))) {[seq_18104 (clojure.core/seq data) chunk_18105 nil count_18106 0 i_18107 0] 11, data 5, pred__18098 6, format 1, unnamed18109 4, write-formatted! 0, value-format 10, output 3, expr__18099 7, map__18103 9, index-format 9, unnamed18108 2}])))))) (->throw (->apply (->apply (->new (java.lang.IllegalArgumentException (clojure.core/str No matching clause:  expr__18099)) ()) (->literal nil)) (->literal nil)))))))))))
-
 
 (parse (fn read-formatted! [format input]
          (condp = (::type format)

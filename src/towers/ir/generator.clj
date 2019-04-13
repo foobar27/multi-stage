@@ -1,6 +1,6 @@
 (ns towers.ir.generator
-  (:require [towers.ir.ast :refer [->literal ->let ->if ->primitive-call ->variable ->closure
-                                   ->lambda ->dot ->new ->throw ->apply]
+  (:require [towers.ir.ast :refer [->literal ->let ->do ->if ->primitive-call ->variable ->closure
+                                   ->lambda ->dot ->new ->throw ->apply ->class-reference]
              :as ast]
             [towers.clojure.ast :as clj]
             [meliae.patterns :refer [match*]]))
@@ -15,6 +15,9 @@
       [(->literal value)]
       (clj/smart-literal value)
 
+      [(->do bodies)]
+      (clj/smart-do (doall (map #(generate % index->sym) bodies)))
+      
       [(->let binding body)]
       (let [sym (gensym)]
         (clj/smart-let* [[sym (generate binding index->sym)]]
@@ -42,7 +45,7 @@
                        {:args [arg-sym]
                         :bodies [(generate ee (conj index->sym f-sym arg-sym))]}))
 
-      [(->apply ff ee)]
+      [(->apply ff [ee])]
       (clj/->call (generate ff index->sym)
                   [(generate ee index->sym)])
 
@@ -51,6 +54,9 @@
                  method-name
                  (vec (map #(generate % index->sym) arguments)))
 
+      [(->class-reference class-name)]
+      (clj/->class-reference class-name)
+      
       [(->throw exception)]
       (clj/->throw (generate exception index->sym))
 
