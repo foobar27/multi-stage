@@ -126,7 +126,16 @@
                                  [(->primitive-call `inc [(->variable 1 "x")])]))
               [(->literal 1)])
      (loop [x 1]
-       (recur (inc x))))))
+       (recur (inc x)))))
+  (testing "shadowing"
+    (verify-parse
+     (->let (->literal 1)
+            (->apply (->lambda (->apply (->variable 1 "loop")
+                                        [(->primitive-call `inc [(->variable 2 "x")])]))
+                     [(->variable 0 "x")]))
+     (let [x 1]
+       (loop [x x]
+         (recur (inc x)))))))
 ;; TODO two arguments
 ;; TODO test recur target shadowing
 

@@ -125,9 +125,8 @@
                ;; We need to adjust sym->index continuously during the reduction
                ;; because one binding could refer to a previous binding
                ;; (like in a let*-statement)
-               (let [sym->index (push-var sym->index sym)]
-                 [(->apply f [(sexp->ir exp sym->index recur-target-variable)])
-                  sym->index]))
+               [(->apply f [(sexp->ir exp sym->index recur-target-variable)])
+                (push-var sym->index sym)])
              [f sym->index]
              bindings))))
 

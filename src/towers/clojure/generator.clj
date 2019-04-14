@@ -1,5 +1,7 @@
 (ns towers.clojure.generator
-  (:require [towers.clojure.ast :refer [->do ->let* ->fn* ->literal ->variable ->if ->invoke] :as ast]
+  (:require [towers.clojure.ast :refer [->do ->let* ->fn* ->literal ->variable
+                                        ->if ->invoke ->dot ->throw ->new]
+             :as ast]
             [meliae.patterns :refer [match*]]))
 
 (defn generate
@@ -44,6 +46,15 @@
      [(->variable symbol)]
      symbol
 
+     [(->new class-name arguments)]
+     `(new ~class-name ~@(doall (map #(generate % recur-target) arguments)))
+     
+     [(->dot object method-name arguments)]
+     `(. ~object ~method-name ~@(doall (map #(generate % recur-target) arguments)))
+
+     [(->throw ee)]
+     `(throw ~(generate ee recur-target))
+     
      [(->invoke f args tail-call?)]
      (if (and tail-call?
               (= f recur-target))

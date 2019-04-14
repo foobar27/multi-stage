@@ -6,7 +6,6 @@
             [meliae.patterns :refer [match*]]))
 
 (defn generate [e index->sym]
-  (println "GENERATE")
   (meliae.patterns/print-pattern e)
   (println)
   (let [index->sym (vec index->sym)]
@@ -46,8 +45,8 @@
                         :bodies [(generate ee (conj index->sym f-sym arg-sym))]}))
 
       [(->apply ff [ee])]
-      (clj/->call (generate ff index->sym)
-                  [(generate ee index->sym)])
+      (clj/smart-invoke (generate ff index->sym)
+                        [(generate ee index->sym)] false)
 
       [(->dot object method-name arguments)]
       (clj/->dot (generate object index->sym)

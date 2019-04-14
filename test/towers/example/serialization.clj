@@ -103,6 +103,56 @@
                                (recur (next seq_38808) nil 0 0)))))))))
           (throw (new java.lang.IllegalArgumentException (str "No matching clause:" EXPR__38803))))))))
 
+(fn* G__22863 [G__22864]
+     (fn* G__22865 [G__22866]
+          (fn* G__22867 [G__22868]
+               (let* [G__22869 (fn* G__22870 ([G__22871] (fn* G__22872 ([G__22873] ((quote clojure.core/=) G__22871 G__22873))))) G__22874 ((quote clojure.core/get) G__22864 :towers.example.serialization/type)]
+                 (if ((G__22869 :towers.example.serialization/primitive) G__22874)
+                   (let* [G__22875 (fn* G__22876 ([G__22877]
+                                                  (fn* G__22878 ([G__22879]
+                                                                 ((quote clojure.core/=) G__22877 G__22879)))))
+                          G__22880 (:towers.example.serialization/primitive-type G__22864)]
+                     (if ((G__22875 :towers.example.serialization/int8) G__22880)
+                       (. #towers.clojure.ast.Expression{:meliae.patterns/kind :towers.clojure.ast/variable, :towers.clojure.ast/symbol G__22866} writeByte ((quote clojure.core/int) G__22868))
+                       (if ((G__22875 :towers.example.serialization/int64) G__22880)
+                         (. #towers.clojure.ast.Expression{:meliae.patterns/kind :towers.clojure.ast/variable, :towers.clojure.ast/symbol G__22866} writeLong ((quote clojure.core/long) G__22868))
+                         (throw ((new java.lang.IllegalArgumentException
+                                      ((quote clojure.core/str) No matching clause:  G__22880)) (quote nil))))))
+                   (if ((G__22869 :towers.example.serialization/record) G__22874)
+                     (((fn* G__22881 [G__22882]
+                            (fn* G__22883 [G__22884]
+                                 (if ((quote clojure.core/seq) G__22882)
+                                   (let* [G__22885 ((quote clojure.core/first) G__22882)
+                                          G__22886 (if ((quote clojure.core/seq?) G__22884) (. #towers.clojure.ast.Expression{:meliae.patterns/kind :towers.clojure.ast/class-reference, :towers.clojure.ast/class-name clojure.lang.PersistentHashMap} create ((quote clojure.core/seq) G__22884)) G__22884)
+                                          G__22887 ((quote clojure.core/get) G__22885 :towers.example.serialization/attribute-name)
+                                          G__22888 ((quote clojure.core/get) G__22885 :towers.example.serialization/attribute-format)]
+                                     ;; TODO should have been removed by smart-let
+                                     (do (((G__22863 G__22886) G__22866) ((quote clojure.core/get) G__22884 G__22885))
+                                         ((G__22883 ((quote clojure.core/rest) G__22882)) G__22884))))))
+                       (:towers.example.serialization/attributes G__22864))
+                      G__22868)
+                     (if ((G__22869 :towers.example.serialization/vector) G__22874)
+                       (let* [G__22889 G__22864
+                              G__22890 (if ((quote clojure.core/seq?) G__22889)
+                                         (. #towers.clojure.ast.Expression{:meliae.patterns/kind :towers.clojure.ast/class-reference, :towers.clojure.ast/class-name clojure.lang.PersistentHashMap} create ((quote clojure.core/seq) G__22889))
+                                         G__22889)
+                              G__22891 ((quote clojure.core/get) G__22890 :towers.example.serialization/index-format)
+                              G__22892 ((quote clojure.core/get) G__22890 :towers.example.serialization/value-format)]
+                         ;; TODO should have been removed by smart-let
+                         (do (((G__22863 G__22890) G__22866) ((quote clojure.core/count) G__22868))
+                             (((((fn* G__22893 ([G__22894] (fn* G__22895 [G__22896]
+                                                                (fn* G__22897 [G__22898]
+                                                                     (fn* G__22899 [G__22900]
+                                                                          (if ((quote clojure.core/<) G__22899 G__22897)
+                                                                            (let* [G__22901 (. #towers.clojure.ast.Expression{:meliae.patterns/kind :towers.clojure.ast/variable, :towers.clojure.ast/symbol G__22895} nth G__22899)]
+                                                                              (((G__22863 G__22891) G__22866) G__22900)
+                                                                              ((((G__22898 G__22893) G__22895) G__22897)
+                                                                               ((quote clojure.core/unchecked-inc) G__22899)))
+                                                                            (let* [G__22902 ((quote clojure.core/seq) G__22893)]
+                                                                              (if G__22900 (let* [G__22903 G__22900]
+                                                                                             (if ((quote clojure.core/chunked-seq?) G__22902)
+                                                                                               (let* [G__22904 ((quote clojure.core/chunk-first) G__22902)]
+                                                                                                 ((((G__22898 ((quote clojure.core/chunk-rest) G__22902)) G__22902) ((quote clojure.core/int) ((quote clojure.core/count) G__22902))) ((quote clojure.core/int) 0))) (let* [G__22905 ((quote clojure.core/first) G__22902)] (((G__22863 G__22891) G__22866) G__22902) ((((G__22898 ((quote clojure.core/next) G__22902)) (quote nil)) 0) 0)))))))))))) ((quote clojure.core/seq) G__22868)) (quote nil)) 0) 0))) (throw ((new java.lang.IllegalArgumentException ((quote clojure.core/str) No matching clause:  G__22874)) (quote nil))))))))))
 
 (let [ir (ir-parser/parse
           (fn write-formatted! [format output data]
@@ -125,7 +175,8 @@
   (println "IR=")
   (meliae.patterns/print-pattern ir)
   (println)
-  (clj-gen/generate (ir-gen/generate ir nil)))
+  (println "FINAL RESULT")
+  (println (clj-gen/generate (ir-gen/generate ir nil))))
 
 (parse (fn read-formatted! [format input]
          (condp = (::type format)

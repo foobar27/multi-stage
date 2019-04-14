@@ -19,7 +19,6 @@
   do       [bodies (s/coll-of ::expression)]
   if       [condition ::expression then ::expression else ::expression]
   fn*      [name symbol? signatures (s/coll-of ::signature)]
-  call     [function ::expression arguments (s/coll-of ::expression)]
   dot      [object ::expression method-name symbol? arguments (s/coll-of ::expression)]
   class-reference [class-name symbol?]
   new      [class-name symbol? arguments (s/coll-of ::expression)]
