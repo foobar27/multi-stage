@@ -11,7 +11,7 @@
    (match* [e]
      
      [(->literal value)]
-     (if ((some-fn number? string? keyword? boolean?) value)
+     (if ((some-fn number? string? keyword? boolean? symbol? nil?) value)
        value
        `(quote ~value))
 
