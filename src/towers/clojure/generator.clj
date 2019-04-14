@@ -1,6 +1,6 @@
 (ns towers.clojure.generator
   (:require [towers.clojure.ast :refer [->do ->let* ->fn* ->literal ->variable
-                                        ->if ->invoke ->dot ->throw ->new]
+                                        ->if ->invoke ->dot ->throw ->new ->class-reference]
              :as ast]
             [meliae.patterns :refer [match*]]))
 
@@ -48,9 +48,12 @@
 
      [(->new class-name arguments)]
      `(new ~class-name ~@(doall (map #(generate % recur-target) arguments)))
+
+     [(->class-reference class-name)]
+     class-name
      
      [(->dot object method-name arguments)]
-     `(. ~object ~method-name ~@(doall (map #(generate % recur-target) arguments)))
+     `(. ~(generate object recur-target) ~method-name ~@(doall (map #(generate % recur-target) arguments)))
 
      [(->throw ee)]
      `(throw ~(generate ee recur-target))
