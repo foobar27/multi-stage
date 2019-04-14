@@ -66,9 +66,9 @@
      (if (= 1 (count signatures))
        ;; Use simplified form if only one signature.
        `(fn* ~f-name
-             ~(let [{:keys [args bodies]} (first signatures)]
-                `([~@args]
-                  ~@(doall (map #(generate % f-name) bodies)))))
+             ~@(let [{:keys [args bodies]} (first signatures)]
+                 `([~@args]
+                   ~@(doall (map #(generate % f-name) bodies)))))
        ;; Use variadic form if more than one signature
        `(fn* ~f-name
              ~@(doall (for [{:keys [args bodies]} signatures]
