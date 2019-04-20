@@ -46,7 +46,7 @@
 
       [(->apply ff [ee])]
       (clj/smart-invoke (generate ff index->sym)
-                        [(generate ee index->sym)] false)
+                        [(generate ee index->sym)])
 
       [(->dot object method-name arguments)]
       (clj/->dot (generate object index->sym)
