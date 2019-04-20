@@ -129,7 +129,10 @@
           ;; Thus we only need to remove tail calls from bindings, not from bindings2
           [(->let* bindings2 bodies2)]
           (->let* (concat (map remove-tail-call bindings) bindings2)
-            [(smart-do bodies2)])
+            (let [body (smart-do bodies2)]
+              (if (do? body)
+                (::bodies body)
+                [body])))
 
           ;; (let [... x 1] x)
           ;; We use recursion via smart-let*, so we don't need to worry
@@ -162,7 +165,8 @@
           ;; This will be the single body of the new let*.
           ;; TODO do we need recursion?
           [expression]
-          (->let* (map remove-tail-call bindings) [expression])))
+          (->let* (map remove-tail-call bindings)
+            [expression])))
       ;; No bindings, consider as a do-block.
       body)))
 
