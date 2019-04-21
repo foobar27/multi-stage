@@ -17,7 +17,7 @@
 (defmultipattern expression)
 (defpatterns expression
   literal   [n any?]
-  variable  [level ::integer original-name ::string]
+  variable  [level ::integer]
   class-reference [class-name symbol?]
   let       [e1 ::expression e2 ::expression]
   lambda    [arity integer? body ::expression]

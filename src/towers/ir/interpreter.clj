@@ -42,7 +42,7 @@
 
 (defn fresh! []
   (let [id (dec (:fresh (swap! state update :fresh inc)))]
-    (->variable id "fresh")))
+    (->variable id)))
 
 (defn- verify-code [e]
   (if (code? e)
@@ -148,7 +148,7 @@
       [(->quote form)]
       (->constant form)
       
-      [(->variable n s)]
+      [(->variable n)]
       (nth env n)
 
       [(->lambda arity body)]

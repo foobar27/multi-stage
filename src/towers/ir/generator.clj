@@ -31,10 +31,9 @@
       (clj/smart-invoke (clj/smart-literal f) ;; TODO or smart-symbol?
                         (doall (map #(generate % index->sym) args)))
 
-      [(->variable level original-name)]
+      [(->variable level)]
       (let [sym (or (get index->sym level)
-                    (throw (IllegalArgumentException. (str "Could not get variable " level
-                                                           " with original name " original-name))))]
+                    (throw (IllegalArgumentException. (str "Could not get variable " level))))]
         (clj/smart-variable sym))
 
       [(->lambda arity ee)]

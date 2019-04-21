@@ -8,7 +8,7 @@
 
 (defn- get-var [sym->index s]
   (if-let [i (get sym->index s)]
-    (->variable i (name s))))
+    (->variable i)))
 
 (defn- push-var [sym->index s]
   (assoc sym->index
