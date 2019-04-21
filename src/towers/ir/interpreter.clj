@@ -5,7 +5,7 @@
                                    ->literal ->variable ->lambda ->apply ->primitive-call ->let ->if
                                    ->lift ->run ->quote
                                    ;; value constructors
-                                   ->constant ->closure ->code]
+                                   ->constant ->closure ->code code?]
              :as ast]
             [meliae.patterns :refer [match*]]))
 
@@ -43,6 +43,11 @@
 (defn fresh! []
   (let [id (dec (:fresh (swap! state update :fresh inc)))]
     (->variable id "fresh")))
+
+(defn- verify-code [e]
+  (if (code? e)
+    e
+    (throw (IllegalArgumentException. (str "Not a code-expression: " e)))))
 
 ;; TODO spec
 (defn run [f-lazy]
@@ -97,10 +102,11 @@
 
     ;;  Rep[A]=>Rep[B]  ==> Rep[A=>B]
     [(->closure env2 e2)]
-    (-> #(evalms (conj (vec env2)
-                       (->code (fresh!))
-                       (->code (fresh!)))
-                 e2)
+    (-> #(verify-code
+          (evalms (conj (vec env2)
+                        (->code (fresh!))
+                        (->code (fresh!)))
+                  e2))
         reifyc
         ->lambda
         reflect) 
@@ -164,9 +170,9 @@
             (reflectc (->primitive-call f code-args)))
 
           ;; else
-          true (throw (IllegalArgumentException. (str "Unhandled case" f " with args" args)))))
+          true (throw (IllegalArgumentException. (str "Unhandled case " f " with args" args)))))
       
-      [(->apply e1 e2)]
+      [(->apply e1 [e2])]
       (match* [(evalms env e1) (evalms env e2)]
 
         [(->closure env3 e3) v2]
@@ -180,16 +186,14 @@
       (match* [(evalms env condition)]
         
         [(->constant n)]
-        (do
-          (println "IF" n "CONDITION" condition)
-          (if n
-            (evalms env then)
-            (evalms env else)))
+        (if n
+          (evalms env then)
+          (evalms env else))
 
         [(->code condition1)]
         (reflectc (->if condition1
-                        (reifyc #(evalms env then))
-                        (reifyc #(evalms env else)))))
+                        (reifyc #(verify-code (evalms env then)))
+                        (reifyc #(verify-code (evalms env else))))))
 
       [(->run b ee)]
       (match* [(evalms env b)]

@@ -19,7 +19,7 @@
 (defmulti destructured-sexp->ir (fn [sym destructured sym->index recur-target-variable]
                                   sym))
 
-(def primitive-fns #{`get `seq `seq? `chunked-seq? `first `chunk-first `rest `chunk-rest `next
+(def primitive-fns #{`get `seq `seq? `chunked-seq? `first `chunk-first `rest `chunk-rest `next `nth
                      `+ `- `* `/ `inc `dec
                      `= `< `> `int `long `str `count
                      `unchecked-inc `unchecked-add `unchecked-add-int `unchecked-byte

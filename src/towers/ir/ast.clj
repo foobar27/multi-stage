@@ -25,7 +25,7 @@
   dot       [object ::expression method-name symbol? arguments (s/coll-of ::expression)]
   new       [class-name symbol? args (s/coll-of ::expression)]
   throw     [exception ::expression]
-  quote     [form ::expression]
+  quote     [form any?]
   do        [args (s/coll-of ::expression)]
   if        [c ::expression a ::expression b ::expression]
   lift      [e ::expression]
@@ -38,6 +38,6 @@
   TRUE  []
   FALSE  []
   NIL []
-  constant  [value ::integer]
+  constant  [value any?]
   closure   [env ::environment e ::expression]
   code      [expression ::expression])
