@@ -64,9 +64,7 @@
          (let [args (or (seq (map #(sexp->ir % sym->index recur-target-variable) args))
                         ;; no-arg functions get an implicit nil-argument
                         [(->literal nil)])]
-           (reduce #(->apply %1 [%2])
-                   resolved-f
-                   args)))
+           (->apply resolved-f args)))
        (throw (IllegalArgumentException. "Unknown symbol: " f))))
 
     true
@@ -105,11 +103,7 @@
 
   ((fn [x1 x2 x3]
      body)
-   v1 v2 v3)
-  
-  (->apply (->apply (->apply f v1)
-                    v2)
-           v3))
+   v1 v2 v3))
 
 (defmethod destructured-sexp->ir 'loop* [_ {:keys [bindings bodies]} sym->index recur-target-variable]
   ;; TODO this is more or less copy & paste of function application
@@ -120,52 +114,36 @@
                                                               :bodies bodies}}}
                                  sym->index
                                  f-name)]
-    (first
-     (reduce (fn [[f sym->index] [sym exp]]
-               ;; We need to adjust sym->index continuously during the reduction
-               ;; because one binding could refer to a previous binding
-               ;; (like in a let*-statement)
-               [(->apply f [(sexp->ir exp sym->index recur-target-variable)])
-                (push-var sym->index sym)])
-             [f sym->index]
-             bindings))))
+    (loop [sym->index sym->index
+           bindings bindings
+           arguments []]
+      (if (seq bindings)
+        (let [[[sym exp] & bindings] bindings]
+          ;; We need to adjust sym->index continuously during the iteration
+          ;; because one binding could refer to a previous binding
+          ;; (like in a let*-statement)
+          (let [argument (sexp->ir exp sym->index recur-target-variable)
+                sym->index (push-var sym->index sym)]
+            (recur sym->index bindings (conj arguments argument))))
+        (->apply f arguments)))))
 
 (defmethod destructured-sexp->ir 'recur [_ {:keys [arguments]} sym->index recur-target-variable]
-  ;; TODO this is more or less copy & paste of function application
-  (println "GET-VAR" sym->index recur-target-variable)
-  (reduce #(->apply %1 [%2])
-          recur-target-variable
-          (map #(sexp->ir % sym->index recur-target-variable) ;; TODO it might be wise to reset recur-target-variable for the args?
-               arguments)))
+  (->apply recur-target-variable
+           (map #(sexp->ir % sym->index recur-target-variable)
+                arguments)))
 
 (defmethod destructured-sexp->ir 'fn* [_ {:keys [name arities]} sym->index recur-target-variable]
   (let [name (or name (gensym "unnamed"))
-        [_ {:keys [args & bodies]} & _] (first arities)] ;; TODO support multiple aritiess
-    (if-let [[arg & args] args]
-      (let [sym->index (-> sym->index
-                           (push-var name)
-                           (push-var arg))
-            recur-target-variable (get-var sym->index name)]
-        (->lambda (if (seq args)
-                    (destructured-sexp->ir 'fn*
-                                           {;; Recursion should point to first lambda only
-                                            ;; So we need to give "unused" names to the other lambdas
-                                            :name nil 
-                                            :arities {(count args) {:args args :bodies bodies}}}
-                                           sym->index
-                                           recur-target-variable)
-                    ;; Base case of recursion (1 argument)
-                    (destructured-sexp->ir 'do
-                                           {:bodies bodies}
-                                           sym->index
-                                           recur-target-variable))))
-      ;; Introduce dummy argument for 0-arg function
-      (destructured-sexp->ir 'fn*
-                             {:name name
-                              :arities {1 {:args [(gensym "unused")] ;; TODO this arity might clash with 1-arity
-                                           :bodies bodies}}}
-                             sym->index
-                             recur-target-variable))))
+        [_ {:keys [args & bodies]} & _] (first arities)] ;; TODO support multiple arities
+    (let [sym->index (reduce push-var
+                             (push-var sym->index name)
+                             args)
+          recur-target-variable (get-var sym->index name)]
+      (->lambda (count args)
+                (destructured-sexp->ir 'do
+                                       {:bodies bodies}
+                                       sym->index
+                                       recur-target-variable)))))
 
 (defmethod destructured-sexp->ir 'if [_ {:keys [condition then else]} sym->index recur-target-variable]
   (->if (sexp->ir condition sym->index recur-target-variable)

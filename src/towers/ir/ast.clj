@@ -20,7 +20,7 @@
   variable  [level ::integer original-name ::string]
   class-reference [class-name symbol?]
   let       [e1 ::expression e2 ::expression]
-  lambda    [e ::expression]
+  lambda    [arity integer? body ::expression]
   apply     [e1 ::expression arguments (s/coll-of ::expression)]
   dot       [object ::expression method-name symbol? arguments (s/coll-of ::expression)]
   new       [class-name symbol? args (s/coll-of ::expression)]
@@ -39,5 +39,5 @@
   FALSE  []
   NIL []
   constant  [value any?]
-  closure   [env ::environment e ::expression]
+  closure   [arity integer? env ::environment body ::expression]
   code      [expression ::expression])

@@ -101,14 +101,13 @@
     ;; (reflect (->cons uu vv))
 
     ;;  Rep[A]=>Rep[B]  ==> Rep[A=>B]
-    [(->closure env2 e2)]
-    (-> #(verify-code
-          (evalms (conj (vec env2)
-                        (->code (fresh!))
-                        (->code (fresh!)))
-                  e2))
-        reifyc
-        ->lambda
+    [(->closure arity body-env body)]
+    (-> (->lambda arity
+                  (-> #(verify-code
+                        (evalms (into (vec body-env)
+                                      (repeatedly (inc arity) (fn [] (->code (fresh!)))))
+                                body))
+                      reifyc))
         reflect) 
 
     [(->code e)]
@@ -119,6 +118,14 @@
   :ret ::ast/expression)
 (defn liftc [v]
   (-> v lift ->code))
+
+;; TODO move to meliae
+(defn pattern->string [pattern]
+  (with-out-str (meliae.patterns/print-pattern pattern)))
+
+(defn patterns->string [patterns]
+  (vec (map pattern->string patterns)))
+
 
 ;;
 ;; Multi-stage evaluation
@@ -144,8 +151,8 @@
       [(->variable n s)]
       (nth env n)
 
-      [(->lambda ee)]
-      (->closure env ee)
+      [(->lambda arity body)]
+      (->closure arity env body)
 
       [(->let e1 e2)]
       (let [v1 (evalms env e1)]
@@ -157,7 +164,6 @@
 
       [(->primitive-call f args)]
       (let [args (doall (map #(evalms env %) args))]
-        (println "PRIMITIVE CALL TO" f "WITH ARGS" args)
         (cond
           
           (every? ast/constant? args)
@@ -165,22 +171,29 @@
                 args (map ::ast/value args)]
             (->constant (apply f args)))
 
-          (every? ast/code? args)
+          (every? code? args)
           (let [code-args (map ::ast/expression args)]
             (reflectc (->primitive-call f code-args)))
 
           ;; else
-          true (throw (IllegalArgumentException. (str "Unhandled case " f " with args" args)))))
+          true (throw (IllegalArgumentException. (str "Unhandled case " f " with args " (patterns->string args))))))
       
-      [(->apply e1 [e2])]
-      (match* [(evalms env e1) (evalms env e2)]
+      [(->apply function arguments)]
+      (let [arguments (doall (map #(evalms env %) arguments))]
+        (match* [(evalms env function)]
 
-        [(->closure env3 e3) v2]
-        (evalms (conj (vec env3) (->closure env3 e3) v2)
-                e3)
+          [(->closure arity body-env body)]
+          (if (= arity (count arguments))
+            (evalms (into (conj (vec body-env)
+                                (->closure arity body-env body))
+                          arguments)
+                    body)
+            (throw (IllegalArgumentException. (str "Arity mismatch, expected " arity " but got " (count arguments) " arguments for function " (pattern->string function) " arguments: " (patterns->string arguments)))))
 
-        [(->code s1) (->code s2)]
-        (reflectc (->apply s1 s2)))
+          [(->code body)]
+          (if (every? code? arguments)
+            (reflectc (->apply body arguments))
+            (throw (IllegalArgumentException. (str "All arguments of lifted function application must be lifted, function: " (pattern->string function) " arguments: " (patterns->string arguments)))))))
       
       [(->if condition then else)]
       (match* [(evalms env condition)]

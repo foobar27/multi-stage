@@ -37,12 +37,12 @@
                                                            " with original name " original-name))))]
         (clj/smart-variable sym))
 
-      [(->lambda ee)]
+      [(->lambda arity ee)]
       (let [f-sym (gensym)
-            arg-sym (gensym)]
+            arg-syms (repeatedly arity gensym)]
         (clj/smart-fn* f-sym
-                       {:args [arg-sym]
-                        :bodies [(generate ee (conj index->sym f-sym arg-sym))]}))
+                       {:args (vec arg-syms)
+                        :bodies [(generate ee (into (conj index->sym f-sym) arg-syms))]}))
 
       [(->apply ff [ee])]
       (clj/smart-invoke (generate ff index->sym)
@@ -62,11 +62,11 @@
       [(->new class-name arguments)]
       (clj/->new class-name (vec (map #(generate % index->sym) arguments)))
       
-      [(->closure env ee)]
+      [(->closure arity env ee)]
       (if (seq env)
         (throw (IllegalArgumentException. "I have no idea how to translate a closure which is not at root level"))
         (let [f-sym (gensym)
-              arg-sym (gensym)]
+              arg-syms (repeatedly arity gensym)]
           (clj/smart-fn* f-sym
-                         {:args [arg-sym] ;; TODO support multiple arguments
-                          :bodies [(generate ee (conj index->sym f-sym arg-sym))]}))))))
+                         {:args (vec arg-syms)
+                          :bodies [(generate ee (into (conj index->sym f-sym) arg-syms))]}))))))
