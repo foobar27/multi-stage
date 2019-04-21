@@ -1,9 +1,10 @@
 (ns towers.ir.interpreter
   (:refer-clojure :exclude [reify])
   (:require [clojure.spec.alpha :as s]
+            [towers.reflection :refer [invoke-constructor]]
             [towers.ir.ast :refer [;; expression constructors
                                    ->literal ->variable ->lambda ->apply ->primitive-call ->let ->if
-                                   ->lift ->run ->quote
+                                   ->lift ->run ->quote ->throw ->new
                                    ;; value constructors
                                    ->constant ->closure ->code code?]
              :as ast]
@@ -182,6 +183,23 @@
 
           ;; else
           true (throw (IllegalArgumentException. (str "Unhandled case " f " with args " (patterns->string args))))))
+
+      [(->throw exception)]
+      (throw (evalms env exception))
+
+      [(->new class-name args)]
+      (if-let [class (resolve class-name)]
+        (do
+          (if (class? class)
+            (let [args (map #(evalms env %) args)]
+              (if (every? ast/constant? args)
+                (let [args (map ::ast/value args)]
+                  (invoke-constructor class args))
+                (throw (IllegalArgumentException. (str "Arguments of " class-name " constructor must be constant: "
+                                                       (into [] args)))))
+              )
+            (throw (ClassNotFoundException. (str "Could not resolve class name: " class ", actual resolved value " class)))))
+        (throw (ClassNotFoundException. (str "Could not resolve class name: " class))))
       
       [(->apply function arguments)]
       (let [arguments (doall (map #(evalms env %) arguments))]
