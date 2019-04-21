@@ -58,10 +58,13 @@
           val
           (reverse c)))
 
+(defn- unnamed-let [expression body]
+  (->let expression body "unnamed-let"))
+
 ;; TODO spec
 (defn reify [f-lazy]
   (run #(do (reset-block!)
-            (fold-right ->let (f-lazy) (get-block)))))
+            (fold-right unnamed-let (f-lazy) (get-block)))))
 
 ;; TODO spec
 (defn reflect [s]
@@ -83,7 +86,7 @@
                 (if (empty? b)
                   res
                   (match* [res]
-                    [(->code l)] (->code (fold-right ->let l b)))))))))
+                    [(->code l)] (->code (fold-right unnamed-let l b)))))))))
 
 (declare evalms)
 
@@ -101,13 +104,14 @@
     ;; (reflect (->cons uu vv))
 
     ;;  Rep[A]=>Rep[B]  ==> Rep[A=>B]
-    [(->closure arity body-env body)]
+    [(->closure arity body-env body original-argument-names)]
     (-> (->lambda arity
                   (-> #(verify-code
                         (evalms (into (vec body-env)
                                       (repeatedly (inc arity) (fn [] (->code (fresh!)))))
                                 body))
-                      reifyc))
+                      reifyc)
+                  original-argument-names)
         reflect) 
 
     [(->code e)]
@@ -151,10 +155,10 @@
       [(->variable n)]
       (nth env n)
 
-      [(->lambda arity body)]
-      (->closure arity env body)
+      [(->lambda arity body original-argument-names)]
+      (->closure arity env body original-argument-names)
 
-      [(->let e1 e2)]
+      [(->let e1 e2 original-name)]
       (let [v1 (evalms env e1)]
         (evalms (conj (vec env) v1)
                 e2))
@@ -182,10 +186,10 @@
       (let [arguments (doall (map #(evalms env %) arguments))]
         (match* [(evalms env function)]
 
-          [(->closure arity body-env body)]
+          [(->closure arity body-env body original-argument-names)]
           (if (= arity (count arguments))
             (evalms (into (conj (vec body-env)
-                                (->closure arity body-env body))
+                                (->closure arity body-env body original-argument-names))
                           arguments)
                     body)
             (throw (IllegalArgumentException. (str "Arity mismatch, expected " arity " but got " (count arguments) " arguments for function " (pattern->string function) " arguments: " (patterns->string arguments)))))

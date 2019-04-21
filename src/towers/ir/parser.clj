@@ -88,7 +88,8 @@
                                     {:bindings bindings ;; remaining bindings
                                      :bodies bodies}
                                     sym->index
-                                    recur-target-variable)))
+                                    recur-target-variable)
+             k))
     ;; base case of recursion (implicit do)
     (destructured-sexp->ir 'do
                            {:bodies bodies}
@@ -143,7 +144,8 @@
                 (destructured-sexp->ir 'do
                                        {:bodies bodies}
                                        sym->index
-                                       recur-target-variable)))))
+                                       recur-target-variable)
+                args))))
 
 (defmethod destructured-sexp->ir 'if [_ {:keys [condition then else]} sym->index recur-target-variable]
   (->if (sexp->ir condition sym->index recur-target-variable)
