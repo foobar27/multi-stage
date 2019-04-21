@@ -145,6 +145,7 @@
                                        {:bodies bodies}
                                        sym->index
                                        recur-target-variable)
+                name
                 args))))
 
 (defmethod destructured-sexp->ir 'if [_ {:keys [condition then else]} sym->index recur-target-variable]

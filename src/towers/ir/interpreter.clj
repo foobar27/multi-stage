@@ -104,13 +104,14 @@
     ;; (reflect (->cons uu vv))
 
     ;;  Rep[A]=>Rep[B]  ==> Rep[A=>B]
-    [(->closure arity body-env body original-argument-names)]
+    [(->closure arity body-env body original-function-name original-argument-names)]
     (-> (->lambda arity
                   (-> #(verify-code
                         (evalms (into (vec body-env)
                                       (repeatedly (inc arity) (fn [] (->code (fresh!)))))
                                 body))
                       reifyc)
+                  original-function-name
                   original-argument-names)
         reflect) 
 
@@ -155,8 +156,8 @@
       [(->variable n)]
       (nth env n)
 
-      [(->lambda arity body original-argument-names)]
-      (->closure arity env body original-argument-names)
+      [(->lambda arity body original-function-name original-argument-names)]
+      (->closure arity env body original-function-name original-argument-names)
 
       [(->let e1 e2 original-name)]
       (let [v1 (evalms env e1)]
@@ -186,10 +187,10 @@
       (let [arguments (doall (map #(evalms env %) arguments))]
         (match* [(evalms env function)]
 
-          [(->closure arity body-env body original-argument-names)]
+          [(->closure arity body-env body original-function-name original-argument-names)]
           (if (= arity (count arguments))
             (evalms (into (conj (vec body-env)
-                                (->closure arity body-env body original-argument-names))
+                                (->closure arity body-env body original-function-name original-argument-names))
                           arguments)
                     body)
             (throw (IllegalArgumentException. (str "Arity mismatch, expected " arity " but got " (count arguments) " arguments for function " (pattern->string function) " arguments: " (patterns->string arguments)))))
