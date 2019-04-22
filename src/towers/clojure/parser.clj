@@ -31,8 +31,8 @@
   {:class-name class-name
    :arguments args})
 
-(defmethod destructure-clj 'throw [_ args]
-  {:exception args})
+(defmethod destructure-clj 'throw [_ [arg]]
+  {:exception arg})
 
 (defmethod destructure-clj 'loop* [_ [bindings & bodies]]
   {:bindings (doall (map vec (partition 2 bindings)))
