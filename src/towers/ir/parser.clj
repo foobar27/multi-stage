@@ -12,7 +12,9 @@
 
 (defn- push-var [sym->index s]
   (assoc sym->index
-         s (count sym->index)))
+         s (if-let [xs (vals sym->index)]
+             (inc (apply max xs))
+             0)))
 
 (declare sexp->ir)
 
