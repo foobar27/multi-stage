@@ -189,7 +189,7 @@
         (cond
 
           (ast/constant? exception)
-          (throw (:ast/value exception))
+          (throw (::ast/value exception))
 
           (ast/code? exception)
           (let [exception (::ast/expression exception)]
