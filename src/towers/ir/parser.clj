@@ -63,9 +63,7 @@
                (->primitive-call resolved-f parsed-args))))))
        ;; Function call
        (when-let [resolved-f (sexp->ir f sym->index recur-target-variable)]
-         (let [args (or (seq (map #(sexp->ir % sym->index recur-target-variable) args))
-                        ;; no-arg functions get an implicit nil-argument
-                        [(->literal nil)])]
+         (let [args (seq (map #(sexp->ir % sym->index recur-target-variable) args))]
            (->apply resolved-f args)))
        (throw (IllegalArgumentException. "Unknown symbol: " f))))
 
