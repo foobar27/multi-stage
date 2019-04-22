@@ -1,10 +1,10 @@
 (ns towers.ir.interpreter
   (:refer-clojure :exclude [reify])
   (:require [clojure.spec.alpha :as s]
-            [towers.reflection :refer [invoke-constructor]]
+            [towers.reflection :refer [invoke-constructor invoke-method]]
             [towers.ir.ast :refer [;; expression constructors
                                    ->literal ->variable ->lambda ->apply ->primitive-call ->let ->if
-                                   ->lift ->run ->quote ->throw ->new
+                                   ->lift ->run ->quote ->throw ->new ->dot
                                    ;; value constructors
                                    ->constant ->closure ->code code?]
              :as ast]
@@ -132,7 +132,6 @@
 (defn patterns->string [patterns]
   (vec (map pattern->string patterns)))
 
-
 ;;
 ;; Multi-stage evaluation
 ;;
@@ -144,9 +143,7 @@
   :ret ::ast/value)
 (defn evalms [env e]
   (do
-    (print "evalms ")
-    (meliae.patterns/print-pattern e)
-    (println)
+    (println "evalms " (pattern->string e))
     (match* [e]
       [(->literal n)]
       (->constant n)
@@ -156,7 +153,7 @@
       
       [(->variable n)]
       (nth env n)
-
+      
       [(->lambda arity body original-function-name original-argument-names)]
       (->closure arity env body original-function-name original-argument-names)
 
@@ -185,21 +182,43 @@
           true (throw (IllegalArgumentException. (str "Unhandled case " f " with args " (patterns->string args))))))
 
       [(->throw exception)]
-      (throw (evalms env exception))
+      (let [exception (evalms env exception)]
+        (cond
+
+          (ast/constant? exception)
+          (throw (:ast/value exception))
+
+          (ast/code? exception)
+          (let [exception (::ast/expression exception)]
+            (reflectc (->throw exception)))))
 
       [(->new class-name args)]
-      (if-let [class (resolve class-name)]
-        (do
-          (if (class? class)
-            (let [args (map #(evalms env %) args)]
-              (if (every? ast/constant? args)
-                (let [args (map ::ast/value args)]
-                  (invoke-constructor class args))
-                (throw (IllegalArgumentException. (str "Arguments of " class-name " constructor must be constant: "
-                                                       (into [] args)))))
-              )
-            (throw (ClassNotFoundException. (str "Could not resolve class name: " class ", actual resolved value " class)))))
-        (throw (ClassNotFoundException. (str "Could not resolve class name: " class))))
+      (let [args (map #(evalms env %) args)]
+        (cond
+
+          (every? ast/constant? args)
+          (if-let [class (resolve class-name)]
+            (if (class? class)
+              (let [args (map ::ast/value args)]
+                (->constant (invoke-constructor class args)))
+              (throw (ClassNotFoundException. (str "Could not resolve class name: " class ", actual resolved value " class))))
+            (throw (ClassNotFoundException. (str "Could not resolve class name: " class))))
+
+          (every? ast/code? args)
+          (let [code-args (map ::ast/expression args)]
+            (reflectc (->new class-name code-args)))))
+
+      [(->dot object method-name args)]
+      (let [args (map #(evalms env %) args)]
+        (cond
+
+          (every? ast/constant? args)
+          (let [args (map ::ast/value args)]
+            (invoke-method object method-name args))
+
+          (every? ast/code? args)
+          (let [code-args (map ::ast/expression args)]
+            (reflectc (->dot object method-name code-args)))))
       
       [(->apply function arguments)]
       (let [arguments (doall (map #(evalms env %) arguments))]

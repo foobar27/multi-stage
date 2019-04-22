@@ -11,7 +11,6 @@
 (stest/instrument (stest/enumerate-namespace ['meliae.patterns 'towers.ir.ast 'towers.clojure.ast
                                               ]))
 
-;; TODO understand loop-recur
 ;; TODO how do we lift loops?
 ;; TODO tail call elimination
 
@@ -22,161 +21,214 @@
 ;; TODO partial application of functions
 
 (def matches
-  (ir-parser/parse (fn matches [r s]
-                     (if (seq r)
-                       (if (seq s)
-                         (if (= (lift (first r))
-                                (first s))
-                           (matches (rest r) (rest s))
+  (ir-parser/parse (fn matches [r]
+                     (fn matches [s]
+                       (if (seq r)
+                         (if (seq s)
+                           (if (= (lift (first r))
+                                  (first s))
+                             ((matches (rest r)) (rest s))
+                             (lift false))
                            (lift false))
-                         (lift false))
-                       (lift true)))))
+                         (lift true))))))
 
 (meliae.patterns/print-pattern matches)
 
-(print-pattern (evalmsg [] (ir-ast/->run (ir-ast/->literal 0) (ir-ast/->lift (ir-ast/->apply matches (ir-ast/->quote '(a b)))))))
+(print-pattern
+ (evalmsg [] (ir-ast/->run (ir-ast/->literal 0) (ir-ast/->lift (ir-ast/->apply matches [(ir-ast/->quote '(a b))])))))
 
 
 (clojure.pprint/pprint
  (clj-gen/generate
   (ir-gen/generate
    (evalmsg []
-            (ir-ast/->run (ir-ast/->literal 0) (ir-ast/->lift (ir-ast/->apply matches (ir-ast/->quote '(a b))))))
+            (ir-ast/->run (ir-ast/->literal 0) (ir-ast/->lift (ir-ast/->apply matches [(ir-ast/->quote '(a b))]))))
    nil)))
 
 ;; TODO support loop*
 ;; TODO support dot forms
 ;; TODO support throw
-(fn write-formatted!
-  [FORMAT output data]
-  (let* [PRED__38802 (fn [p1__38800# p2__38801#]
-                       (= p1__38800# p2__38801#))
-         EXPR__38803 (::type FORMAT)]
-    (if (PRED__38802 ::primitive EXPR__38803)
-      (let* [PRED__38804 (fn [p1__38800# p2__38801#]
-                           (= p1__38800# p2__38801#))
-             EXPR__38805 (::primitive-type FORMAT)]
-        (if (PRED__38804 ::int8 EXPR__38805)
-          (lift (. output writeByte (int data)))
-          (if (PRED__38804 ::int64 EXPR__38805)
-            (lift (. output writeLong (long data)))
-            (throw (new java.lang.IllegalArgumentException (str "No matching clause:"  EXPR__38805))))))
-      (if (PRED__38802 ::record EXPR__38803)
-        (loop* [ATTRIBUTES (::attributes FORMAT)
-                data data]
-               (if (seq ATTRIBUTES)
-                 (let* [MAP__38806 (first ATTRIBUTES)
-                        MAP__38806 (if (seq? map__38806)
-                                     (. clojure.lang.PersistentHashMap create (seq MAP__38806))
-                                     MAP__38806)
-                        ATTRIBUTE-NAME (get MAP__38806 ::attribute-name)
-                        ATTRIBUTE-FORMAT (get MAP__38806 ::attribute-format)]
-                   (write-formatted! attribute-format output (get data ATTRIBUTE-NAME))
-                   (recur (rest ATTRIBUTES) data))))
-        (if (PRED__38802 ::vector EXPR__38803)
-          (let* [MAP__38807 FORMAT
-                 MAP__38807 (if (seq? MAP__38807)
-                              (. clojure.lang.PersistentHashMap create (seq MAP__38807))
-                              MAP__38807)
-                 INDEX_FORMAT (get MAP__38807 ::index-format)
-                 VALUE-FORMAT (get MAP__38807 ::value-format)]
-            (write-formatted! INDEX-FORMAT output (count data))
-            (loop* [seq_38808 (seq data)
-                    chunk_38809 nil
-                    count_38810 0
-                    i_38811 0]
-                   (if (< i_38811 count_38810)
-                     (let* [item (. chunk_38809 nth i_38811)]
-                       (write-formatted! VALUE-FORMAT output item)
-                       (recur seq_38808 chunk_38809 count_38810 (unchecked-inc i_38811)))
-                     (let* [temp__5720__auto__ (seq seq_38808)]
-                       (when temp__5720__auto__
-                         (let* [seq_38808 temp__5720__auto__]
-                           (if (chunked-seq? seq_38808)
-                             (let* [c__5983__auto__ (chunk-first seq_38808)]
-                               (recur (chunk-rest seq_38808)
-                                      c__5983__auto__
-                                      (int (count c__5983__auto__))
-                                      (int 0)))
-                             (let* [item (first seq_38808)]
-                               (write-formatted! VALUE-FORMAT output item)
-                               (recur (next seq_38808) nil 0 0)))))))))
-          (throw (new java.lang.IllegalArgumentException (str "No matching clause:" EXPR__38803))))))))
+(comment
+  (fn write-formatted!
+    [FORMAT output data]
+    (let* [PRED__38802 (fn [p1__38800# p2__38801#]
+                         (= p1__38800# p2__38801#))
+           EXPR__38803 (::type FORMAT)]
+      (if (PRED__38802 ::primitive EXPR__38803)
+        (let* [PRED__38804 (fn [p1__38800# p2__38801#]
+                             (= p1__38800# p2__38801#))
+               EXPR__38805 (::primitive-type FORMAT)]
+          (if (PRED__38804 ::int8 EXPR__38805)
+            (lift (. output writeByte (int data)))
+            (if (PRED__38804 ::int64 EXPR__38805)
+              (lift (. output writeLong (long data)))
+              (throw (new java.lang.IllegalArgumentException (str "No matching clause:"  EXPR__38805))))))
+        (if (PRED__38802 ::record EXPR__38803)
+          (loop* [ATTRIBUTES (::attributes FORMAT)
+                  data data]
+                 (if (seq ATTRIBUTES)
+                   (let* [MAP__38806 (first ATTRIBUTES)
+                          MAP__38806 (if (
+                                          seq? map__38806)
+                                       (. clojure.lang.PersistentHashMap create (seq MAP__38806))
+                                       MAP__38806)
+                          ATTRIBUTE-NAME (get MAP__38806 ::attribute-name)
+                          ATTRIBUTE-FORMAT (get MAP__38806 ::attribute-format)]
+                     (write-formatted! attribute-format output (get data ATTRIBUTE-NAME))
+                     (recur (rest ATTRIBUTES) data))))
+          (if (PRED__38802 ::vector EXPR__38803)
+            (let* [MAP__38807 FORMAT
+                   MAP__38807 (if (seq? MAP__38807)
+                                (. clojure.lang.PersistentHashMap create (seq MAP__38807))
+                                MAP__38807)
+                   INDEX_FORMAT (get MAP__38807 ::index-format)
+                   VALUE-FORMAT (get MAP__38807 ::value-format)]
+              (write-formatted! INDEX-FORMAT output (count data))
+              (loop* [seq_38808 (seq data)
+                      chunk_38809 nil
+                      count_38810 0
+                      i_38811 0]
+                     (if (< i_38811 count_38810)
+                       (let* [item (. chunk_38809 nth i_38811)]
+                         (write-formatted! VALUE-FORMAT output item)
+                         (recur seq_38808 chunk_38809 count_38810 (unchecked-inc i_38811)))
+                       (let* [temp__5720__auto__ (seq seq_38808)]
+                         (when temp__5720__auto__
+                           (let* [seq_38808 temp__5720__auto__]
+                             (if (chunked-seq? seq_38808)
+                               (let* [c__5983__auto__ (chunk-first seq_38808)]
+                                 (recur (chunk-rest seq_38808)
+                                        c__5983__auto__
+                                        (int (count c__5983__auto__))
+                                        (int 0)))
+                               (let* [item (first seq_38808)]
+                                 (write-formatted! VALUE-FORMAT output item)
+                                 (recur (next seq_38808) nil 0 0)))))))))
+            (throw (new java.lang.IllegalArgumentException (str "No matching clause:" EXPR__38803)))))))))
 
-(fn* G__22863 [G__22864]
-     (fn* G__22865 [G__22866]
-          (fn* G__22867 [G__22868]
-               (let* [G__22869 (fn* G__22870 ([G__22871] (fn* G__22872 ([G__22873] ((quote clojure.core/=) G__22871 G__22873))))) G__22874 ((quote clojure.core/get) G__22864 :towers.example.serialization/type)]
-                 (if ((G__22869 :towers.example.serialization/primitive) G__22874)
-                   (let* [G__22875 (fn* G__22876 ([G__22877]
-                                                  (fn* G__22878 ([G__22879]
-                                                                 ((quote clojure.core/=) G__22877 G__22879)))))
-                          G__22880 (:towers.example.serialization/primitive-type G__22864)]
-                     (if ((G__22875 :towers.example.serialization/int8) G__22880)
-                       (. #towers.clojure.ast.Expression{:meliae.patterns/kind :towers.clojure.ast/variable, :towers.clojure.ast/symbol G__22866} writeByte ((quote clojure.core/int) G__22868))
-                       (if ((G__22875 :towers.example.serialization/int64) G__22880)
-                         (. #towers.clojure.ast.Expression{:meliae.patterns/kind :towers.clojure.ast/variable, :towers.clojure.ast/symbol G__22866} writeLong ((quote clojure.core/long) G__22868))
-                         (throw ((new java.lang.IllegalArgumentException
-                                      ((quote clojure.core/str) No matching clause:  G__22880)) (quote nil))))))
-                   (if ((G__22869 :towers.example.serialization/record) G__22874)
-                     (((fn* G__22881 [G__22882]
-                            (fn* G__22883 [G__22884]
-                                 (if ((quote clojure.core/seq) G__22882)
-                                   (let* [G__22885 ((quote clojure.core/first) G__22882)
-                                          G__22886 (if ((quote clojure.core/seq?) G__22884) (. #towers.clojure.ast.Expression{:meliae.patterns/kind :towers.clojure.ast/class-reference, :towers.clojure.ast/class-name clojure.lang.PersistentHashMap} create ((quote clojure.core/seq) G__22884)) G__22884)
-                                          G__22887 ((quote clojure.core/get) G__22885 :towers.example.serialization/attribute-name)
-                                          G__22888 ((quote clojure.core/get) G__22885 :towers.example.serialization/attribute-format)]
-                                     ;; TODO should have been removed by smart-let
-                                     (do (((G__22863 G__22886) G__22866) ((quote clojure.core/get) G__22884 G__22885))
-                                         ((G__22883 ((quote clojure.core/rest) G__22882)) G__22884))))))
-                       (:towers.example.serialization/attributes G__22864))
-                      G__22868)
-                     (if ((G__22869 :towers.example.serialization/vector) G__22874)
-                       (let* [G__22889 G__22864
-                              G__22890 (if ((quote clojure.core/seq?) G__22889)
-                                         (. #towers.clojure.ast.Expression{:meliae.patterns/kind :towers.clojure.ast/class-reference, :towers.clojure.ast/class-name clojure.lang.PersistentHashMap} create ((quote clojure.core/seq) G__22889))
-                                         G__22889)
-                              G__22891 ((quote clojure.core/get) G__22890 :towers.example.serialization/index-format)
-                              G__22892 ((quote clojure.core/get) G__22890 :towers.example.serialization/value-format)]
-                         ;; TODO should have been removed by smart-let
-                         (do (((G__22863 G__22890) G__22866) ((quote clojure.core/count) G__22868))
-                             (((((fn* G__22893 ([G__22894] (fn* G__22895 [G__22896]
-                                                                (fn* G__22897 [G__22898]
-                                                                     (fn* G__22899 [G__22900]
-                                                                          (if ((quote clojure.core/<) G__22899 G__22897)
-                                                                            (let* [G__22901 (. #towers.clojure.ast.Expression{:meliae.patterns/kind :towers.clojure.ast/variable, :towers.clojure.ast/symbol G__22895} nth G__22899)]
-                                                                              (((G__22863 G__22891) G__22866) G__22900)
-                                                                              ((((G__22898 G__22893) G__22895) G__22897)
-                                                                               ((quote clojure.core/unchecked-inc) G__22899)))
-                                                                            (let* [G__22902 ((quote clojure.core/seq) G__22893)]
-                                                                              (if G__22900 (let* [G__22903 G__22900]
-                                                                                             (if ((quote clojure.core/chunked-seq?) G__22902)
-                                                                                               (let* [G__22904 ((quote clojure.core/chunk-first) G__22902)]
-                                                                                                 ((((G__22898 ((quote clojure.core/chunk-rest) G__22902)) G__22902) ((quote clojure.core/int) ((quote clojure.core/count) G__22902))) ((quote clojure.core/int) 0))) (let* [G__22905 ((quote clojure.core/first) G__22902)] (((G__22863 G__22891) G__22866) G__22902) ((((G__22898 ((quote clojure.core/next) G__22902)) (quote nil)) 0) 0)))))))))))) ((quote clojure.core/seq) G__22868)) (quote nil)) 0) 0))) (throw ((new java.lang.IllegalArgumentException ((quote clojure.core/str) No matching clause:  G__22874)) (quote nil))))))))))
+(comment
+  (fn G__11132 [G__11133]
+    (fn G__11134 [G__11135]
+      (fn G__11136 [G__11137]
+        (let* [G__11138 (fn G__11139 [G__11140]
+                          (fn G__11141 [G__11142]
+                            (= G__11140 G__11142)))
+               G__11143 (get G__11133 ::type)]
+          (if ((G__11138 ::primitive) G__11143)
+            (let* [G__11144 (fn G__11145 [G__11146]
+                              (fn G__11147 [G__11148]
+                                (= G__11146 G__11148)))
+                   G__11149 (::primitive-type G__11133)]
+              (if ((G__11144 ::int8) G__11149)
+                (. G__11135 writeByte (int G__11137))
+                (if ((G__11144 ::int64) G__11149)
+                  (. G__11135 writeLong (long G__11137))
+                  (throw ((new java.lang.IllegalArgumentException (str "No matching clause:"  G__11149)) nil)))))
+            (if ((G__11138 ::record) G__11143)
+              (((fn G__11150 [G__11151]
+                  (fn G__11152 [G__11153]
+                    (if (seq G__11151)
+                      (let* [G__11154 (first G__11151)
+                             G__11155 (if (seq? G__11153)
+                                        (. clojure.lang.PersistentHashMap create (seq G__11153))
+                                        G__11153)
+                             G__11156 (get G__11154 ::attribute-name)
+                             G__11157 (get G__11154 ::attribute-format)]
+                        (((G__11132 G__11155) G__11135) (get G__11153 G__11154))
+                        ((G__11152 (rest G__11151)) G__11153)))))
+                (::attributes G__11133))
+               G__11137)
+              (if ((G__11138 ::vector) G__11143)
+                (let* [G__11158 G__11133
+                       G__11159 (if (seq? G__11158)
+                                  (. clojure.lang.PersistentHashMap create (seq G__11158))
+                                  G__11158)
+                       G__11160 (get G__11159 ::index-format)
+                       G__11161 (get G__11159 ::value-format)]
+                  (((G__11132 G__11159)
+                    G__11135)
+                   (count G__11137))
+                  (((((fn G__11162 [G__11163]
+                        (fn G__11164 [G__11165]
+                          (fn G__11166 [G__11167]
+                            (fn G__11168 [G__11169]
+                              (if (< G__11168 G__11166)
+                                (let* [G__11170 (. G__11164 nth G__11168)]
+                                  (((G__11132 G__11160) G__11135) G__11169)
+                                  ((((G__11167 G__11162)
+                                     G__11164)
+                                    G__11166)
+                                   (unchecked-inc G__11168)))
+                                (let* [G__11171 (seq G__11162)]
+                                  (if G__11169
+                                    (let* [G__11172 G__11169]
+                                      (if (chunked-seq? G__11171)
+                                        (let* [G__11173 (chunk-first G__11171)]
+                                          ((((G__11167 (chunk-rest G__11171))
+                                             G__11171)
+                                            (int (count G__11171)))
+                                           (int 0)))
+                                        (let* [G__11174 (first G__11171)]
+                                          (((G__11132 G__11160)
+                                            G__11135)
+                                           G__11171)
+                                          ((((G__11167 (next G__11171))
+                                             nil)
+                                            0)
+                                           0)))))))))))
+                      (seq G__11137))
+                     nil)
+                    0)
+                   0))
+                (throw ((new java.lang.IllegalArgumentException (str "No matching clause:"  G__11143)) nil))))))))))
+
+(comment
+  ;; TODO re-introduce in big example below
+  ::record (loop [attributes (::attributes format)
+                  data data]
+             (when (seq attributes)
+               (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
+                 ((write-formatted! attribute-format) output (get data attribute-name))
+                 (recur (rest attributes) data))))
+  ::vector (let [{:keys [::index-format ::value-format]} format]
+             ((write-formatted! index-format output (count data)))
+             (doseq [item (lift data)]
+               ((write-formatted! value-format) output item))))
+
 
 (let [ir (ir-parser/parse
-          (fn write-formatted! [format output data]
-            (condp #(= %1 %2) (get format ::type)
-              ;; TODO this could be a multi-method
-              ::primitive (condp #(= %1 %2) (::primitive-type format)
-                            ;; TODO this could be a multi-method
-                            ::int8 (.writeByte output (int data)) ;; the int-cast is not a mistake, check the signature
-                            ::int64 (.writeLong output (long data)))
-              ::record (loop [attributes (::attributes format)
-                              data data]
-                         (when (seq attributes)
-                           (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
-                             (write-formatted! attribute-format output (get data attribute-name))
-                             (recur (rest attributes) data))))
-              ::vector (let [{:keys [::index-format ::value-format]} format]
-                         (write-formatted! index-format output (count data))
-                         (doseq [item data]
-                           (write-formatted! value-format output item))))))]
+          (fn write-formatted! [format]
+            (fn [output data]
+              (condp #(= %1 %2) (get format ::type)
+                ;; TODO this could be a multi-method
+                ::primitive (condp #(= %1 %2) (get format ::primitive-type)
+                              ;; TODO this could be a multi-method
+                              ::int8 (.writeByte output (int data)) ;; the int-cast is not a mistake, check the signature
+                              ::int64 (.writeLong output (long data)))
+                ))))]
   (println "IR=")
   (meliae.patterns/print-pattern ir)
   (println)
-  (println "FINAL RESULT")
-  (println (clj-gen/generate (ir-gen/generate ir nil))))
+
+  (let [format {::type ::primitive
+                ::primitive-type ::int8}
+        ir (evalmsg [] (ir-ast/->run (ir-ast/->literal 0)
+                                     (ir-ast/->lift (ir-ast/->apply ir [(ir-ast/->quote format)]))))]
+    
+    (println "INTERPRETED=")
+    (meliae.patterns/print-pattern ir)
+    (println)
+    
+    
+    (let [clj-ast (ir-gen/generate ir nil)]
+      
+      (println "CLJ AST:")
+      (meliae.patterns/print-pattern clj-ast)
+      (println)
+      
+      (println "FINAL RESULT")
+      (println (clj-gen/generate clj-ast))
+      (println))))
 
 (parse (fn read-formatted! [format input]
          (condp = (::type format)
