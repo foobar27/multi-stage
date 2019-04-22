@@ -3,7 +3,7 @@
   (:require [clojure.spec.alpha :as s]
             [towers.reflection :refer [invoke-constructor invoke-method]]
             [towers.ir.ast :refer [;; expression constructors
-                                   ->literal ->variable ->lambda ->apply ->primitive-call ->let ->if
+                                   ->literal ->variable ->lambda ->apply ->primitive-call ->let ->if ->do
                                    ->lift ->run ->quote ->throw ->new ->dot
                                    ;; value constructors
                                    ->constant ->closure ->code code?]
@@ -48,7 +48,7 @@
 (defn- verify-code [e]
   (if (code? e)
     e
-    (throw (IllegalArgumentException. (str "Not a code-expression: " e)))))
+    (throw (IllegalArgumentException. (str "Not a code-expression: " (pattern->string e))))))
 
 ;; TODO spec
 (defn run [f-lazy]
@@ -130,7 +130,7 @@
   (with-out-str (meliae.patterns/print-pattern pattern)))
 
 (defn patterns->string [patterns]
-  (vec (map pattern->string patterns)))
+  (pattern->string (vec patterns)))
 
 ;;
 ;; Multi-stage evaluation
@@ -162,6 +162,9 @@
         (evalms (conj (vec env) v1)
                 e2))
 
+      [(->do expressions)]
+      (last (map #(evalms env %) expressions))
+      
       [(->lift ee)]
       (liftc (evalms env ee))
 
@@ -190,7 +193,10 @@
 
           (ast/code? exception)
           (let [exception (::ast/expression exception)]
-            (reflectc (->throw exception)))))
+            (reflectc (->throw exception)))
+
+          ;; else
+          true (throw (IllegalArgumentException. (str "Unhandled case throw " (patterns->string exception))))))
 
       [(->new class-name args)]
       (let [args (map #(evalms env %) args)]
@@ -206,23 +212,35 @@
 
           (every? ast/code? args)
           (let [code-args (map ::ast/expression args)]
-            (reflectc (->new class-name code-args)))))
+            (reflectc (->new class-name code-args)))
+
+          ;; else
+          true (throw (IllegalArgumentException. (str "Unhandled case " class-name " with args " (patterns->string args))))))
 
       [(->dot object method-name args)]
-      (let [args (map #(evalms env %) args)]
+      (let [object (evalms env object)
+            args (map #(evalms env %) args)]
         (cond
 
-          (every? ast/constant? args)
-          (let [args (map ::ast/value args)]
+          (and (ast/constant? object)
+               (every? ast/constant? args))
+          (let [object (::ast/value object)
+                args (map ::ast/value args)]
             (invoke-method object method-name args))
 
-          (every? ast/code? args)
-          (let [code-args (map ::ast/expression args)]
-            (reflectc (->dot object method-name code-args)))))
+          (and (ast/code? object)
+               (every? ast/code? args))
+          (let [object (::ast/expression object)
+                code-args (map ::ast/expression args)]
+            (reflectc (->dot object method-name code-args)))
+
+          ;; else
+          true (throw (IllegalArgumentException. (str "Unhandled case " (pattern->string object) "." method-name " with args " (patterns->string args))))))
       
       [(->apply function arguments)]
-      (let [arguments (doall (map #(evalms env %) arguments))]
-        (match* [(evalms env function)]
+      (let [function (evalms env function)
+            arguments (doall (map #(evalms env %) arguments))]
+        (match* [function]
 
           [(->closure arity body-env body original-function-name original-argument-names)]
           (if (= arity (count arguments))
