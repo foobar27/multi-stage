@@ -57,6 +57,12 @@
     e
     (throw (IllegalArgumentException. (str "Not a code-expression: " (pattern->string e))))))
 
+(defn- verify-code-or-lift-constant [e]
+  (cond
+    (code? e) e
+    (ast/constant? e) (->code (->literal (::ast/value e)))
+    true (throw (IllegalArgumentException. (str "Neither a code-, nor a constant-expression: " (pattern->string e))))))
+
 ;; TODO spec
 (defn run [f-lazy]
   (restore-state (f-lazy)))
@@ -264,8 +270,8 @@
 
         [(->code condition1)]
         (reflectc (->if condition1
-                        (reifyc #(verify-code (evalms env then)))
-                        (reifyc #(verify-code (evalms env else))))))
+                        (reifyc #(verify-code-or-lift-constant (evalms env then)))
+                        (reifyc #(verify-code-or-lift-constant (evalms env else))))))
 
       [(->run b ee)]
       (match* [(evalms env b)]

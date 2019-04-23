@@ -202,9 +202,7 @@
                            (if (seq attributes)
                              (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
                                ((write-formatted! attribute-format) output (get data attribute-name))
-                               (recur (rest attributes) data))
-                             ;; TODO can we get rid of this?
-                             (lift nil)))
+                               (recur (rest attributes) data))))
                 ::vector (let [{:keys [::index-format ::value-format]} format]
                            ((write-formatted! index-format) output (count data))
                            ;; TODO replace by doseq
@@ -212,9 +210,7 @@
                                     (if (seq data)
                                       (let [[item & data] data]
                                         ((write-formatted! value-format) output item)
-                                        (the-loop data))
-                                      ;; TODO can we get rid of this?
-                                      (lift nil))))
+                                        (the-loop data)))))
                             data))))))]
   (println "IR=")
   (meliae.patterns/print-pattern ir)
