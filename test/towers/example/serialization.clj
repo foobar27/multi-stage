@@ -22,7 +22,7 @@
 
 (def matches
   (ir-parser/parse (fn matches [r]
-                     (fn matches [s]
+                     (fn matches-inner [s]
                        (if (seq r)
                          (if (seq s)
                            (if (= (lift (first r))
@@ -183,35 +183,56 @@
                 (throw ((new java.lang.IllegalArgumentException (str "No matching clause:"  G__11143)) nil))))))))))
 
 (comment
-  ;; TODO re-introduce in big example below
-  ::record (loop [attributes (::attributes format)
-                  data data]
-             (when (seq attributes)
-               (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
-                 ((write-formatted! attribute-format) output (get data attribute-name))
-                 (recur (rest attributes) data))))
-  ::vector (let [{:keys [::index-format ::value-format]} format]
-             ((write-formatted! index-format output (count data)))
-             (doseq [item (lift data)]
-               ((write-formatted! value-format) output item))))
-
+  (doseq [item data]
+    (lift
+     ((write-formatted! value-format) output item))))
 
 (let [ir (ir-parser/parse
           (fn write-formatted! [format]
             (fn [output data]
+              ;; TODO use = as lambda reference
               (condp #(= %1 %2) (get format ::type)
                 ;; TODO this could be a multi-method
                 ::primitive (condp #(= %1 %2) (get format ::primitive-type)
                               ;; TODO this could be a multi-method
                               ::int8 (.writeByte output (int data)) ;; the int-cast is not a mistake, check the signature
                               ::int64 (.writeLong output (long data)))
-                ))))]
+                ::record (loop [attributes (get format ::attributes)
+                                data data]
+                           (if (seq attributes)
+                             (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
+                               ((write-formatted! attribute-format) output (get data attribute-name))
+                               (recur (rest attributes) data))
+                             ;; TODO can we get rid of this?
+                             (lift nil)))
+                ::vector (let [{:keys [::index-format ::value-format]} format]
+                           ((write-formatted! index-format) output (count data))
+                           ;; TODO replace by doseq
+                           ((lift (fn the-loop [data]
+                                    (if (seq data)
+                                      (let [[item & data] data]
+                                        ((write-formatted! value-format) output item)
+                                        (the-loop data))
+                                      ;; TODO can we get rid of this?
+                                      (lift nil))))
+                            data))))))]
   (println "IR=")
   (meliae.patterns/print-pattern ir)
   (println)
 
-  (let [format {::type ::primitive
-                ::primitive-type ::int8}
+  (let [primitive-format {::type ::primitive
+                          ::primitive-type ::int8}
+        record-format {::type ::record
+                       ::attributes [{::attribute-name ::first-name
+                                      ::attribute-format {::type ::primitive
+                                                          ::primitive-type ::int8}}
+                                     {::attribute-name ::last-name
+                                      ::attribute-format {::type ::primitive
+                                                          ::primitive-type ::int8}}]}
+        vector-format {::type ::vector
+                       ::index-format primitive-format
+                       ::value-format record-format}
+        format vector-format
         ir (evalmsg [] (ir-ast/->run (ir-ast/->literal 0)
                                      (ir-ast/->lift (ir-ast/->apply ir [(ir-ast/->quote format)]))))]
     
@@ -252,7 +273,7 @@
                         (if (pos? remaining-items)
                           (recur (dec remaining-items)
                                  (lift (conj! data (read-formatted! value-format input))))
-                          (lift (persistent! data))))))))
+                          (persistent! data)))))))
 
 (defn write-formatted! [format]
   (fn [output data]
