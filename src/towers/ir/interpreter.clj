@@ -10,6 +10,13 @@
              :as ast]
             [meliae.patterns :refer [match*]]))
 
+;; TODO move to meliae
+(defn pattern->string [pattern]
+  (with-out-str (meliae.patterns/print-pattern pattern)))
+
+(defn patterns->string [patterns]
+  (pattern->string (vec patterns)))
+
 ;; TODO make more fns private
 
 
@@ -60,7 +67,7 @@
           (reverse c)))
 
 (defn- unnamed-let [expression body]
-  (->let expression body "unnamed-let"))
+  (->let expression body 'unnamed-let))
 
 ;; TODO spec
 (defn reify [f-lazy]
@@ -125,13 +132,6 @@
 (defn liftc [v]
   (-> v lift ->code))
 
-;; TODO move to meliae
-(defn pattern->string [pattern]
-  (with-out-str (meliae.patterns/print-pattern pattern)))
-
-(defn patterns->string [patterns]
-  (pattern->string (vec patterns)))
-
 ;;
 ;; Multi-stage evaluation
 ;;
@@ -164,7 +164,7 @@
   :ret ::ast/value)
 (defn evalms [env e]
   (do
-    (println "evalms " (pattern->string e))
+    (comment (println "evalms " (pattern->string e)))
     (match* [e]
       [(->literal n)]
       (->constant n)
