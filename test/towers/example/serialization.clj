@@ -197,12 +197,8 @@
                               ;; TODO this could be a multi-method
                               ::int8 (.writeByte output (int data)) ;; the int-cast is not a mistake, check the signature
                               ::int64 (.writeLong output (long data)))
-                ::record (loop [attributes (get format ::attributes)
-                                data data]
-                           (if (seq attributes)
-                             (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
-                               ((write-formatted! attribute-format) output (get data attribute-name))
-                               (recur (rest attributes) data))))
+                ::record (doseq [{:keys [::attribute-name ::attribute-format]} (get format ::attributes)]
+                           ((write-formatted! attribute-format) output (get data attribute-name)))
                 ::vector (let [{:keys [::index-format ::value-format]} format]
                            ((write-formatted! index-format) output (count data))
                            ;; TODO replace by doseq
