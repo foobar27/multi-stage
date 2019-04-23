@@ -1,7 +1,10 @@
 (ns towers.ir.core)
 
-(defn lift [& args]
-  (throw (IllegalStateException. "Must be in parsed block")))
+(defn lift [arg]
+  (throw (IllegalStateException. "Must be in parsed block.")))
 
-(defn run [& args]
-  (throw (IllegalStateException. "Must be in parsed block")))
+(defn lift-loop [arg]
+  (throw (IllegalStateException. "Must be in parsed block.")))
+
+(defn run [arg]
+  (throw (IllegalStateException. "Must be in parsed block.")))

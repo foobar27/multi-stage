@@ -144,6 +144,11 @@
 (declare evalms)
 (declare evalmsg)
 
+(defn- remove-code-lift-constant [arg]
+  (cond
+    (ast/code? arg)     (::ast/expression arg)
+    (ast/constant? arg) (ast/->literal (::ast/value arg))))
+
 (defn- process-arguments [env args evaluate-now build-ast to-string]
   (let [args (map #(evalms env %) args)]
     (cond
@@ -156,10 +161,7 @@
       ;; -> get expression from code, wrap constant into code
       ;; -> reflect code block
       (every? (some-fn ast/code? ast/constant?) args)
-      (reflectc (build-ast (for [arg args]
-                             (cond
-                               (ast/code? arg)     (::ast/expression arg)
-                               (ast/constant? arg) (ast/->literal (::ast/value arg))))))
+      (reflectc (build-ast (map remove-code-lift-constant args)))
 
       ;; else
       true (throw (IllegalArgumentException. (str "Unhandled case:" (to-string args)))))))
@@ -256,9 +258,9 @@
             (throw (IllegalArgumentException. (str "Arity mismatch, expected " arity " but got " (count arguments) " arguments for function " (pattern->string function) " arguments: " (patterns->string arguments)))))
 
           [(->code body)]
-          (if (every? code? arguments)
+          (if (every? (some-fn code? ast/constant?) arguments)
             (reflectc (->apply body (map ::ast/expression arguments)))
-            (throw (IllegalArgumentException. (str "All arguments of lifted function application must be lifted, function: " (pattern->string function) " arguments: " (patterns->string arguments)))))))
+            (throw (IllegalArgumentException. (str "All non-constant arguments of lifted function application must be lifted, function: " (pattern->string function) " arguments: " (patterns->string arguments)))))))
       
       [(->if condition then else)]
       (match* [(evalms env condition)]

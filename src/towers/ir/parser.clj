@@ -1,10 +1,12 @@
 (ns towers.ir.parser
-  (:require [towers.ir.ast :refer  [->literal ->variable ->do ->let ->lambda ->apply ->dot ->new
-                                    ->if ->lift ->run ->primitive-call ->quote ->throw ->class-reference]]
+  (:require [towers.ir.ast :refer [->literal ->variable ->do ->let ->lambda ->apply ->dot ->new
+                                   ->if ->lift ->run ->primitive-call ->quote ->throw ->class-reference]
+             :as ast]
             [clojure.walk :refer [macroexpand-all]]
+            [meliae.patterns :refer [match*]]
             [towers.utils :refer [resolve-symbol]]
             [towers.clojure.parser :refer [destructure-clj]]
-            [towers.ir.core :refer [lift run]]))
+            [towers.ir.core :refer [lift lift-loop run]]))
 
 (defn- get-var [sym->index s]
   (if-let [i (get sym->index s)]
@@ -58,6 +60,10 @@
             (or
              (when-let [ctor (get {`lift ->lift, `run ->run} resolved-f)]
                (apply ctor parsed-args))
+             (when (= `lift-loop resolved-f)
+               (match* [(vec parsed-args)]
+                 [[(->apply the-lambda lambda-arguments)]]
+                 (->apply (->lift the-lambda) lambda-arguments)))
              ;; Primitive function call
              (when (contains? primitive-fns resolved-f)
                (->primitive-call resolved-f parsed-args))))))

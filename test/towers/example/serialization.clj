@@ -2,7 +2,7 @@
   (:require [towers.clojure.generator :as clj-gen]
             [towers.ir.ast :as ir-ast]
             [towers.ir.parser :as ir-parser]
-            [towers.ir.core :refer [lift run]]
+            [towers.ir.core :refer [lift lift-loop run]]
             [towers.ir.interpreter :refer [evalmsg]]
             [towers.ir.generator :as ir-gen]
             [meliae.patterns :refer [print-pattern]]
@@ -201,13 +201,12 @@
                            ((write-formatted! attribute-format) output (get data attribute-name)))
                 ::vector (let [{:keys [::index-format ::value-format]} format]
                            ((write-formatted! index-format) output (count data))
-                           ;; TODO replace by doseq
-                           ((lift (fn the-loop [data]
-                                    (if (seq data)
-                                      (let [[item & data] data]
-                                        ((write-formatted! value-format) output item)
-                                        (the-loop data)))))
-                            data))))))]
+                           ;; TODO replace loop by doseq
+                           (lift-loop (loop [data data]
+                                        (if (seq data)
+                                          (let [[item & data] data]
+                                            ((write-formatted! value-format) output item)
+                                            (recur data))))))))))]
   (println "IR=")
   (meliae.patterns/print-pattern ir)
   (println)
