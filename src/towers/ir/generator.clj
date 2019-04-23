@@ -43,9 +43,9 @@
                        {:args (vec arg-syms)
                         :bodies [(generate ee (into (conj index->sym f-sym) arg-syms))]}))
 
-      [(->apply ff [ee])]
+      [(->apply ff arguments)]
       (clj/smart-invoke (generate ff index->sym)
-                        [(generate ee index->sym)])
+                        (map #(generate % index->sym) arguments))
 
       [(->dot object method-name arguments)]
       (clj/->dot (generate object index->sym)
