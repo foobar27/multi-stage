@@ -153,7 +153,7 @@
       (reflectc (build-ast (for [arg args]
                              (cond
                                (ast/code? arg)     (::ast/expression arg)
-                               (ast/constant? arg) (->code arg)))))
+                               (ast/constant? arg) (ast/->literal (::ast/value arg))))))
 
       ;; else
       true (throw (IllegalArgumentException. (str "Unhandled case:" (to-string args)))))))
