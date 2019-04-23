@@ -251,7 +251,7 @@
 
           [(->code body)]
           (if (every? code? arguments)
-            (reflectc (->apply body arguments))
+            (reflectc (->apply body (map ::ast/expression arguments)))
             (throw (IllegalArgumentException. (str "All arguments of lifted function application must be lifted, function: " (pattern->string function) " arguments: " (patterns->string arguments)))))))
       
       [(->if condition then else)]
