@@ -137,6 +137,27 @@
 ;;
 (declare evalms)
 (declare evalmsg)
+
+(defn- process-arguments [env args evaluate-now build-ast to-string]
+  (let [args (map #(evalms env %) args)]
+    (cond
+
+      ;; all constants -> evaluate and return constant
+      (every? ast/constant? args)
+      (->constant (evaluate-now (map ::ast/value args)))
+
+      ;; some code, some constant
+      ;; -> get expression from code, wrap constant into code
+      ;; -> reflect code block
+      (every? (some-fn ast/code? ast/constant?) args)
+      (reflectc (build-ast (for [arg args]
+                             (cond
+                               (ast/code? arg)     (::ast/expression arg)
+                               (ast/constant? arg) (->code arg)))))
+
+      ;; else
+      true (throw (IllegalArgumentException. (str "Unhandled case:" (to-string args)))))))
+
 (s/fdef evalms
   :args (s/cat :env ::ast/environment
                :e   ::ast/expression)
@@ -169,73 +190,51 @@
       (liftc (evalms env ee))
 
       [(->primitive-call f args)]
-      (let [args (doall (map #(evalms env %) args))]
-        (cond
-          
-          (every? ast/constant? args)
-          (let [f (resolve f)
-                args (map ::ast/value args)]
-            (->constant (apply f args)))
-
-          (every? code? args)
-          (let [code-args (map ::ast/expression args)]
-            (reflectc (->primitive-call f code-args)))
-
-          ;; else
-          true (throw (IllegalArgumentException. (str "Unhandled case " f " with args " (patterns->string args))))))
-
-      [(->throw exception)]
-      (let [exception (evalms env exception)]
-        (cond
-
-          (ast/constant? exception)
-          (throw (::ast/value exception))
-
-          (ast/code? exception)
-          (let [exception (::ast/expression exception)]
-            (reflectc (->throw exception)))
-
-          ;; else
-          true (throw (IllegalArgumentException. (str "Unhandled case throw " (patterns->string exception))))))
-
-      [(->new class-name args)]
-      (let [args (map #(evalms env %) args)]
-        (cond
-
-          (every? ast/constant? args)
-          (if-let [class (resolve class-name)]
-            (if (class? class)
-              (let [args (map ::ast/value args)]
-                (->constant (invoke-constructor class args)))
-              (throw (ClassNotFoundException. (str "Could not resolve class name: " class ", actual resolved value " class))))
-            (throw (ClassNotFoundException. (str "Could not resolve class name: " class))))
-
-          (every? ast/code? args)
-          (let [code-args (map ::ast/expression args)]
-            (reflectc (->new class-name code-args)))
-
-          ;; else
-          true (throw (IllegalArgumentException. (str "Unhandled case " class-name " with args " (patterns->string args))))))
-
+      (process-arguments env
+                         args
+                         (fn evaluate-now [args]
+                           (apply (resolve f) args))
+                         (fn build-ast [args]
+                           (->primitive-call f args))
+                         (fn to-string [args]
+                           (str "Primitive call to " f
+                                " with args " (patterns->string args))))
+      
       [(->dot object method-name args)]
-      (let [object (evalms env object)
-            args (map #(evalms env %) args)]
-        (cond
-
-          (and (ast/constant? object)
-               (every? ast/constant? args))
-          (let [object (::ast/value object)
-                args (map ::ast/value args)]
-            (invoke-method object method-name args))
-
-          (and (ast/code? object)
-               (every? ast/code? args))
-          (let [object (::ast/expression object)
-                code-args (map ::ast/expression args)]
-            (reflectc (->dot object method-name code-args)))
-
-          ;; else
-          true (throw (IllegalArgumentException. (str "Unhandled case " (pattern->string object) "." method-name " with args " (patterns->string args))))))
+      (process-arguments env
+                         (into [object] args)
+                         (fn evaluate-now [[object & args]]
+                           (invoke-method object method-name args))
+                         (fn build-ast [[object & args]]
+                           (->dot object method-name args))
+                         (fn to-string [[object & args]]
+                           (str "Call to method " method-name
+                                " on object " (pattern->string object)
+                                " with args " (patterns->string args))))
+      
+      [(->throw exception)]
+      (process-arguments env
+                         [exception]
+                         (fn evaluate-now [[exception]]
+                           (throw exception))
+                         (fn build-ast [[exception]]
+                           (->throw exception))
+                         (fn to-string [[exception]]
+                           ("Throw exception " (pattern->string exception))))
+      
+      [(->new class-name args)]
+      (process-arguments env
+                         args
+                         (fn evaluate-now [args]
+                           (if-let [class (resolve class-name)]
+                             (if (class? class)
+                               (invoke-constructor class args)
+                               (throw (ClassNotFoundException. (str "Could not find class " class ", actual resolved symbol " class "  is of type " (type class)))))
+                             (throw (ClassNotFoundException. (str "Could not resolve class name: " class)))))
+                         (fn build-ast [args]
+                           (->new class-name args))
+                         (fn to-string [args]
+                           (str "Constructor for " class-name " with arguments " (patterns->string args))))
       
       [(->apply function arguments)]
       (let [function (evalms env function)
