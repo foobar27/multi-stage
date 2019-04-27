@@ -22,10 +22,9 @@
   dot      [object ::expression method-name symbol? arguments (s/coll-of ::expression)]
   class-reference [class-name symbol?]
   new      [class-name symbol? arguments (s/coll-of ::expression)]
-  throw    [exception ::expression]
   invoke   [function ::expression args (s/coll-of ::expression) tail-position? boolean?])
 
-;; TODO what about  "return nil" after tail call?
+;; TODO what about "return nil" after tail call?
 ;; TODO this does not work if condition is a do/let/if-statement (with at least 2 bodies, the second one being a tail call)
 ;; TODO maybe we should remember "has-tail-position" if last do-statement is a tail-position? but this would hinder pattern matching in the generator
 (defn- remove-tail-position
