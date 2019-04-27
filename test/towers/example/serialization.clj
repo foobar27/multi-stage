@@ -45,147 +45,39 @@
             (ir-ast/->run (ir-ast/->literal 0) (ir-ast/->lift (ir-ast/->apply matches [(ir-ast/->quote '(a b))]))))
    nil)))
 
-;; TODO support loop*
-;; TODO support dot forms
-;; TODO support throw
-(comment
-  (fn write-formatted!
-    [FORMAT output data]
-    (let* [PRED__38802 (fn [p1__38800# p2__38801#]
-                         (= p1__38800# p2__38801#))
-           EXPR__38803 (::type FORMAT)]
-      (if (PRED__38802 ::primitive EXPR__38803)
-        (let* [PRED__38804 (fn [p1__38800# p2__38801#]
-                             (= p1__38800# p2__38801#))
-               EXPR__38805 (::primitive-type FORMAT)]
-          (if (PRED__38804 ::int8 EXPR__38805)
-            (lift (. output writeByte (int data)))
-            (if (PRED__38804 ::int64 EXPR__38805)
-              (lift (. output writeLong (long data)))
-              (throw (new java.lang.IllegalArgumentException (str "No matching clause:"  EXPR__38805))))))
-        (if (PRED__38802 ::record EXPR__38803)
-          (loop* [ATTRIBUTES (::attributes FORMAT)
-                  data data]
-                 (if (seq ATTRIBUTES)
-                   (let* [MAP__38806 (first ATTRIBUTES)
-                          MAP__38806 (if (
-                                          seq? map__38806)
-                                       (. clojure.lang.PersistentHashMap create (seq MAP__38806))
-                                       MAP__38806)
-                          ATTRIBUTE-NAME (get MAP__38806 ::attribute-name)
-                          ATTRIBUTE-FORMAT (get MAP__38806 ::attribute-format)]
-                     (write-formatted! attribute-format output (get data ATTRIBUTE-NAME))
-                     (recur (rest ATTRIBUTES) data))))
-          (if (PRED__38802 ::vector EXPR__38803)
-            (let* [MAP__38807 FORMAT
-                   MAP__38807 (if (seq? MAP__38807)
-                                (. clojure.lang.PersistentHashMap create (seq MAP__38807))
-                                MAP__38807)
-                   INDEX_FORMAT (get MAP__38807 ::index-format)
-                   VALUE-FORMAT (get MAP__38807 ::value-format)]
-              (write-formatted! INDEX-FORMAT output (count data))
-              (loop* [seq_38808 (seq data)
-                      chunk_38809 nil
-                      count_38810 0
-                      i_38811 0]
-                     (if (< i_38811 count_38810)
-                       (let* [item (. chunk_38809 nth i_38811)]
-                         (write-formatted! VALUE-FORMAT output item)
-                         (recur seq_38808 chunk_38809 count_38810 (unchecked-inc i_38811)))
-                       (let* [temp__5720__auto__ (seq seq_38808)]
-                         (when temp__5720__auto__
-                           (let* [seq_38808 temp__5720__auto__]
-                             (if (chunked-seq? seq_38808)
-                               (let* [c__5983__auto__ (chunk-first seq_38808)]
-                                 (recur (chunk-rest seq_38808)
-                                        c__5983__auto__
-                                        (int (count c__5983__auto__))
-                                        (int 0)))
-                               (let* [item (first seq_38808)]
-                                 (write-formatted! VALUE-FORMAT output item)
-                                 (recur (next seq_38808) nil 0 0)))))))))
-            (throw (new java.lang.IllegalArgumentException (str "No matching clause:" EXPR__38803)))))))))
-
-(comment
-  (fn G__11132 [G__11133]
-    (fn G__11134 [G__11135]
-      (fn G__11136 [G__11137]
-        (let* [G__11138 (fn G__11139 [G__11140]
-                          (fn G__11141 [G__11142]
-                            (= G__11140 G__11142)))
-               G__11143 (get G__11133 ::type)]
-          (if ((G__11138 ::primitive) G__11143)
-            (let* [G__11144 (fn G__11145 [G__11146]
-                              (fn G__11147 [G__11148]
-                                (= G__11146 G__11148)))
-                   G__11149 (::primitive-type G__11133)]
-              (if ((G__11144 ::int8) G__11149)
-                (. G__11135 writeByte (int G__11137))
-                (if ((G__11144 ::int64) G__11149)
-                  (. G__11135 writeLong (long G__11137))
-                  (throw ((new java.lang.IllegalArgumentException (str "No matching clause:"  G__11149)) nil)))))
-            (if ((G__11138 ::record) G__11143)
-              (((fn G__11150 [G__11151]
-                  (fn G__11152 [G__11153]
-                    (if (seq G__11151)
-                      (let* [G__11154 (first G__11151)
-                             G__11155 (if (seq? G__11153)
-                                        (. clojure.lang.PersistentHashMap create (seq G__11153))
-                                        G__11153)
-                             G__11156 (get G__11154 ::attribute-name)
-                             G__11157 (get G__11154 ::attribute-format)]
-                        (((G__11132 G__11155) G__11135) (get G__11153 G__11154))
-                        ((G__11152 (rest G__11151)) G__11153)))))
-                (::attributes G__11133))
-               G__11137)
-              (if ((G__11138 ::vector) G__11143)
-                (let* [G__11158 G__11133
-                       G__11159 (if (seq? G__11158)
-                                  (. clojure.lang.PersistentHashMap create (seq G__11158))
-                                  G__11158)
-                       G__11160 (get G__11159 ::index-format)
-                       G__11161 (get G__11159 ::value-format)]
-                  (((G__11132 G__11159)
-                    G__11135)
-                   (count G__11137))
-                  (((((fn G__11162 [G__11163]
-                        (fn G__11164 [G__11165]
-                          (fn G__11166 [G__11167]
-                            (fn G__11168 [G__11169]
-                              (if (< G__11168 G__11166)
-                                (let* [G__11170 (. G__11164 nth G__11168)]
-                                  (((G__11132 G__11160) G__11135) G__11169)
-                                  ((((G__11167 G__11162)
-                                     G__11164)
-                                    G__11166)
-                                   (unchecked-inc G__11168)))
-                                (let* [G__11171 (seq G__11162)]
-                                  (if G__11169
-                                    (let* [G__11172 G__11169]
-                                      (if (chunked-seq? G__11171)
-                                        (let* [G__11173 (chunk-first G__11171)]
-                                          ((((G__11167 (chunk-rest G__11171))
-                                             G__11171)
-                                            (int (count G__11171)))
-                                           (int 0)))
-                                        (let* [G__11174 (first G__11171)]
-                                          (((G__11132 G__11160)
-                                            G__11135)
-                                           G__11171)
-                                          ((((G__11167 (next G__11171))
-                                             nil)
-                                            0)
-                                           0)))))))))))
-                      (seq G__11137))
-                     nil)
-                    0)
-                   0))
-                (throw ((new java.lang.IllegalArgumentException (str "No matching clause:"  G__11143)) nil))))))))))
-
-(comment
-  (doseq [item data]
-    (lift
-     ((write-formatted! value-format) output item))))
+(fn unnamed2125021256 [output21257 data21258]
+  (let* [unnamed-let21259 (count data21258)
+         unnamed-let21260 (int unnamed-let21259)
+         unnamed-let21261 (. output21257 writeByte unnamed-let21260)
+         unnamed-let21262 (fn* loop2125421263 [seq_2124621264 chunk_2124721265 count_2124821266 i_2124921267]
+                               (if (< i_2124921267 count_2124821266)
+                                 (let* [unnamed-let21270 (. chunk_2124721265 nth i_2124921267)
+                                        unnamed-let21271 (get unnamed-let21270 ::first-name)
+                                        unnamed-let21272 (int unnamed-let21271)
+                                        unnamed-let21273 (. output21257 writeByte unnamed-let21272)
+                                        unnamed-let21274 (get unnamed-let21270 ::last-name)
+                                        unnamed-let21275 (int unnamed-let21274)
+                                        unnamed-let21276 (. output21257 writeByte unnamed-let21275)
+                                        unnamed-let21277 (unchecked-inc i_2124921267)]
+                                   (loop2125421263 seq_2124621264 chunk_2124721265 count_2124821266 unnamed-let21277))
+                                 (if (seq seq_2124621264) 
+                                   (if (chunked-seq? unnamed-let21279)
+                                     (let* [unnamed-let21283 (chunk-first unnamed-let21279)
+                                            unnamed-let21284 (chunk-rest unnamed-let21279)
+                                            unnamed-let21285 (count unnamed-let21283)
+                                            unnamed-let21286 (int unnamed-let21285)]
+                                       (loop2125421263 unnamed-let21284 unnamed-let21283 unnamed-let21286 0))
+                                     (let* [unnamed-let21288 (first unnamed-let21279)
+                                            unnamed-let21289 (get unnamed-let21288 ::first-name)
+                                            unnamed-let21290 (int unnamed-let21289)
+                                            unnamed-let21291 (. output21257 writeByte unnamed-let21290)
+                                            unnamed-let21292 (get unnamed-let21288 ::last-name)
+                                            unnamed-let21293 (int unnamed-let21292)
+                                            unnamed-let21294 (. output21257 writeByte unnamed-let21293)
+                                            unnamed-let21295 (next unnamed-let21279)]
+                                       (loop2125421263 unnamed-let21295 nil 0 0))))))
+         unnamed-let21297 (seq data21258)]
+    (unnamed-let21262 unnamed-let21297 nil 0 0)))
 
 (let [ir (ir-parser/parse
           (fn write-formatted! [format]
@@ -201,12 +93,8 @@
                            ((write-formatted! attribute-format) output (get data attribute-name)))
                 ::vector (let [{:keys [::index-format ::value-format]} format]
                            ((write-formatted! index-format) output (count data))
-                           ;; TODO replace loop by doseq
-                           (lift-loop (loop [data data]
-                                        (if (seq data)
-                                          (let [[item & data] data]
-                                            ((write-formatted! value-format) output item)
-                                            (recur data))))))))))]
+                           (lift-loop (doseq [item data]
+                                        ((write-formatted! value-format) output item))))))))]
   (println "IR=")
   (meliae.patterns/print-pattern ir)
   (println)

@@ -259,7 +259,7 @@
 
           [(->code body)]
           (if (every? (some-fn code? ast/constant?) arguments)
-            (reflectc (->apply body (map ::ast/expression arguments)))
+            (reflectc (->apply body (map #(::ast/expression (verify-code-or-lift-constant %)) arguments)))
             (throw (IllegalArgumentException. (str "All non-constant arguments of lifted function application must be lifted, function: " (pattern->string function) " arguments: " (patterns->string arguments)))))))
       
       [(->if condition then else)]
