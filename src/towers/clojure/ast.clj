@@ -63,6 +63,61 @@
       [expression]
       expression)))
 
+(defn- uses-symbol? [e s]
+  (letfn [(uses-this-symbol? [e]
+            (uses-symbol? e s))]
+    (match* [e]
+      [(->invoke f args tail-position?)]
+      (or (= f s)
+          (some uses-this-symbol? args))
+
+      [(->literal value)]
+      false
+
+      [(->variable sym)]
+      (= s sym)
+
+      [(->let* bindings bodies)]
+      ;; TODO one of the bindings could shadow subsequent usages
+      (or (some uses-this-symbol? (map second bindings))
+          (some uses-this-symbol? bodies))
+      
+      [(->loop* bindings bodies)]
+      ;; TODO one of the bindings could shadow subsequent usages
+      (or (some uses-this-symbol? (map second bindings))
+          (some uses-this-symbol? bodies))
+      
+      [(->throw exception)]
+      (uses-this-symbol? exception)
+
+      [(->do bodies)]
+      (some uses-this-symbol? bodies)
+
+      [(->if condition then else)]
+      (or (uses-this-symbol? condition)
+          (uses-this-symbol? then)
+          (uses-this-symbol? else))
+
+      [(->fn* name signatures)]
+      (some (fn [{:keys [args bodies]}]
+              ;; TODO one arg could shadow the signature
+              (some uses-this-symbol? bodies))
+            signatures)
+
+      [(->dot object method-name arguments)]
+      (or (uses-this-symbol? object)
+          (some uses-this-symbol? arguments))
+
+      [(->class-reference class-name)]
+      false
+
+      [(->new class-name arguments)]
+      (some uses-this-symbol? arguments)
+
+      [(->invoke function args tail-position?)]
+      (or (uses-this-symbol? function)
+          (some uses-this-symbol? args)))))
+
 (declare smart-if)
 
 (s/fdef smart-literal
@@ -120,7 +175,12 @@
       (let [[last-binding-sym last-binding-expr] (last bindings)
             remove-tail-position-from-bindings (fn [bindings]
                                                  (for [[k v] bindings]
-                                                   [k (remove-tail-position v)]))]
+                                                   [k (remove-tail-position v)]))
+            simplify-bodies (fn [bodies]
+                              (let [body (smart-do bodies)]
+                                (if (do? body)
+                                  (::bodies body)
+                                  [body])))]
         (match* [body]
 
           ;; One single nested let* expression, merge into current expression.
@@ -132,10 +192,7 @@
           [(->let* bindings2 bodies2)]
           (->let* (concat (remove-tail-position-from-bindings bindings)
                           bindings2)
-            (let [body (smart-do bodies2)]
-              (if (do? body)
-                (::bodies body)
-                [body])))
+            (simplify-bodies bodies2))
 
           ;; (let [... x 1] x)
           ;; We use recursion via smart-let*, so we don't need to worry
@@ -145,19 +202,24 @@
           (smart-let* (drop-last bindings)
             [last-binding-expr])
 
-          ;; TODO This optimization is buggy, in case the binding is used at another place.
-          ;; ;; (let [... x 1] (if x then else))
-          ;; ;; We use recursion via smart-let*, so we don't need to worry
-          ;; ;; about tail calls right now.
-          ;; ;; Please note that in this case the last binding is *not* a tail position,
-          ;; ;; but the smart-if constructor takes care of that.
-          ;; [(->if (->variable last-binding-sym)
-          ;;        then
-          ;;        else)]
-          ;; (smart-let* (drop-last bindings)
-          ;;   [(smart-if last-binding-expr
-          ;;              then
-          ;;              else)])
+          ;; (let [... x 1] (if x then else))
+          [(->if (->variable last-binding-sym)
+                 then
+                 else)]
+          (if-not (or (uses-symbol? then last-binding-sym)
+                      (uses-symbol? else last-binding-sym))
+            ;; We use recursion via smart-let*, so we don't need to worry
+            ;; about tail calls right now.
+            ;; Please note that in this case the last binding is *not* a tail position,
+            ;; but the smart-if constructor takes care of that.
+            (smart-let* (drop-last bindings)
+              [(smart-if last-binding-expr
+                         then
+                         else)])
+            ;; Unfortunately we cannot do this optimization because the symbol
+            ;; is used at another location too.
+            (->let* (remove-tail-position-from-bindings bindings)
+              (simplify-bodies bodies)))
           
           ;; One single nested do expression, replace by implicit do.
           ;; No need to recur, if there has been a single nested let*,
