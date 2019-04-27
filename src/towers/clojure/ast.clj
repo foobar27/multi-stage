@@ -23,27 +23,27 @@
   class-reference [class-name symbol?]
   new      [class-name symbol? arguments (s/coll-of ::expression)]
   throw    [exception ::expression]
-  invoke   [function ::expression args (s/coll-of ::expression) tail-call? boolean?])
+  invoke   [function ::expression args (s/coll-of ::expression) tail-position? boolean?])
 
 ;; TODO what about  "return nil" after tail call?
 ;; TODO this does not work if condition is a do/let/if-statement (with at least 2 bodies, the second one being a tail call)
-;; TODO maybe we should remember "has-tail-call" if last do-statement is a tail-call? but this would hinder pattern matching in the generator
-(defn- remove-tail-call
+;; TODO maybe we should remember "has-tail-position" if last do-statement is a tail-position? but this would hinder pattern matching in the generator
+(defn- remove-tail-position
   "Resets tail call flags in invoke, do-blocks and implicit do-blocks."
   [e]
-  (letfn [(remove-last-tail-call [bodies]
+  (letfn [(remove-last-tail-position [bodies]
             (conj (vec (butlast bodies))
-                  (remove-tail-call (last bodies))))]
+                  (remove-tail-position (last bodies))))]
     (match* [e]
       
-      [(->invoke function args tail-call?)]
+      [(->invoke function args tail-position?)]
       (->invoke function args false)
 
       [(->do bodies)]
       ;; By the smart constructor contract:
       ;; * bodies is not empty
       ;; * only the last body can contain a tail call.
-      (->do (remove-last-tail-call bodies))
+      (->do (remove-last-tail-position bodies))
 
       [(->let* bindings bodies)]
       ;; By the smart constructor contract:
@@ -51,14 +51,14 @@
       ;; * bodies is not empty
       ;; * only the last body can contain a tail call
       (->let* bindings
-        (remove-last-tail-call bodies))
+        (remove-last-tail-position bodies))
 
       [(->if condition then else)]
       ;; By the smart constructor contract:
       ;; * condition does not contain tail calls
       (->if condition
-            (remove-tail-call then)
-            (remove-tail-call else))
+            (remove-tail-position then)
+            (remove-tail-position else))
 
       ;; Default: ignore
       [expression]
@@ -76,9 +76,9 @@
   :args (s/cat :bodies (s/coll-of ::expression))
   :ret ::expression)
 (defn smart-do [bodies]
-  (letfn [(adjust-tail-calls [bodies]
+  (letfn [(adjust-tail-positions [bodies]
             (if (seq bodies)
-              (conj (vec (map remove-tail-call (butlast bodies)))
+              (conj (vec (map remove-tail-position (butlast bodies)))
                     ;; keep the tail of the last one
                     (last bodies))))]
     (match* [(vec bodies)]
@@ -106,7 +106,7 @@
                             (::bodies body)
                             [body]))
                         bodies)
-                adjust-tail-calls)))))
+                adjust-tail-positions)))))
 
 ;; TODO document guarantees
 (s/fdef smart-let*
@@ -128,7 +128,7 @@
           ;; * bindings2 is not empty
           ;; Thus we only need to remove tail calls from bindings, not from bindings2
           [(->let* bindings2 bodies2)]
-          (->let* (concat (map remove-tail-call bindings) bindings2)
+          (->let* (concat (map remove-tail-position bindings) bindings2)
             (let [body (smart-do bodies2)]
               (if (do? body)
                 (::bodies body)
@@ -160,13 +160,13 @@
           ;; No need to recur, if there has been a single nested let*,
           ;; it would be equal to body.
           [(->do bodies2)]
-          (->let* (map remove-tail-call bindings) bodies2)
+          (->let* (map remove-tail-position bindings) bodies2)
 
           ;; A single expression (neither let* nor do).
           ;; This will be the single body of the new let*.
           ;; TODO do we need recursion?
           [expression]
-          (->let* (map remove-tail-call bindings)
+          (->let* (map remove-tail-position bindings)
             [expression])))
       ;; No bindings, consider as a do-block.
       body)))
@@ -182,7 +182,7 @@
   ([condition then]
    (smart-if condition then (->literal nil)))
   ([condition then else]
-   (->if (remove-tail-call condition)
+   (->if (remove-tail-position condition)
          then
          else)))
 
@@ -193,7 +193,7 @@
   :ret ::expression)
 (defn smart-invoke [f args]
   (->invoke (smart-do [f])
-            (doall (map #(remove-tail-call (smart-do [%])) args))
+            (doall (map #(remove-tail-position (smart-do [%])) args))
             ;; by default it's a tail call
             ;; other smart constructors are responsible for setting this back to false
             true))
