@@ -137,15 +137,15 @@
                 (::bodies body)
                 [body])))
 
-          ;; TODO These two optimizations are buggy, in case the binding is used at another place.
-          ;; ;; (let [... x 1] x)
-          ;; ;; We use recursion via smart-let*, so we don't need to worry
-          ;; ;; about tail calls right now.
-          ;; ;; Please note that in this case the last binding is a tail position.
-          ;; [(->variable last-binding-sym)]
-          ;; (smart-let* (drop-last bindings)
-          ;;   [last-binding-expr])
+          ;; (let [... x 1] x)
+          ;; We use recursion via smart-let*, so we don't need to worry
+          ;; about tail calls right now.
+          ;; Please note that in this case the last binding is a tail position.
+          [(->variable last-binding-sym)]
+          (smart-let* (drop-last bindings)
+            [last-binding-expr])
 
+          ;; TODO This optimization is buggy, in case the binding is used at another place.
           ;; ;; (let [... x 1] (if x then else))
           ;; ;; We use recursion via smart-let*, so we don't need to worry
           ;; ;; about tail calls right now.
