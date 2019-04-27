@@ -59,11 +59,12 @@
      `(throw ~(generate ee recur-target))
      
      [(->invoke f args tail-call?)]
-     (if (and tail-call?
-              (= f recur-target))
-       ;; TODO the string-to-symbol conversion is a workaround to an alegded clojure bug
-       `(~(symbol "recur") ~@(doall (map #(generate % recur-target) args)))
-       `(~(generate f recur-target) ~@(doall (map #(generate % recur-target) args))))
+     (let [f (generate f recur-target)]
+       (if (and tail-call?
+                (= f recur-target))
+         ;; TODO the string-to-symbol conversion is a workaround to an alegded clojure bug
+         `(~(symbol "recur") ~@(doall (map #(generate % recur-target) args)))
+         `(~f ~@(doall (map #(generate % recur-target) args)))))
 
      [(->fn* f-name signatures)]
      (if (= 1 (count signatures))
