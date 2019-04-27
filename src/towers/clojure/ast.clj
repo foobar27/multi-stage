@@ -41,20 +41,20 @@
       [(->do bodies)]
       ;; By the smart constructor contract:
       ;; * bodies is not empty
-      ;; * only the last body can contain a tail call.
+      ;; * only the last body can contain a tail call (no need to check the others)
       (->do (remove-last-tail-position bodies))
 
       [(->let* bindings bodies)]
       ;; By the smart constructor contract:
       ;; * bindings do not contain tail calls
       ;; * bodies is not empty
-      ;; * only the last body can contain a tail call
+      ;; * only the last body can contain a tail call (no need to check the others)
       (->let* bindings
         (remove-last-tail-position bodies))
 
       [(->if condition then else)]
       ;; By the smart constructor contract:
-      ;; * condition does not contain tail calls
+      ;; * condition does not contain tail calls (no need to check)
       (->if condition
             (remove-tail-position then)
             (remove-tail-position else))
@@ -117,7 +117,10 @@
   ;; This way we also do not need to remove the (butlast) tailcalls from the bodies.
   (let [body (smart-do bodies)]
     (if (seq bindings)
-      (let [[last-binding-sym last-binding-expr] (last bindings)]
+      (let [[last-binding-sym last-binding-expr] (last bindings)
+            remove-tail-position-from-bindings (fn [bindings]
+                                                 (for [[k v] bindings]
+                                                   [k (remove-tail-position v)]))]
         (match* [body]
 
           ;; One single nested let* expression, merge into current expression.
@@ -127,7 +130,8 @@
           ;; * bindings2 is not empty
           ;; Thus we only need to remove tail calls from bindings, not from bindings2
           [(->let* bindings2 bodies2)]
-          (->let* (concat (map remove-tail-position bindings) bindings2)
+          (->let* (concat (remove-tail-position-from-bindings bindings)
+                          bindings2)
             (let [body (smart-do bodies2)]
               (if (do? body)
                 (::bodies body)
@@ -159,13 +163,13 @@
           ;; No need to recur, if there has been a single nested let*,
           ;; it would be equal to body.
           [(->do bodies2)]
-          (->let* (map remove-tail-position bindings) bodies2)
+          (->let* (remove-tail-position-from-bindings bindings) bodies2)
 
           ;; A single expression (neither let* nor do).
           ;; This will be the single body of the new let*.
           ;; TODO do we need recursion?
           [expression]
-          (->let* (map remove-tail-position bindings)
+          (->let* (remove-tail-position-from-bindings bindings)
             [expression])))
       ;; No bindings, consider as a do-block.
       body)))
