@@ -27,9 +27,7 @@
                          (if (seq s)
                            (if (= (lift (first r))
                                   (first s))
-                             ((matches (rest r)) (rest s))
-                             (lift false))
-                           (lift false))
+                             ((matches (rest r)) (rest s))))
                          (lift true))))))
 
 (meliae.patterns/print-pattern matches)
@@ -37,47 +35,12 @@
 (print-pattern
  (evalmsg [] (ir-ast/->run (ir-ast/->literal 0) (ir-ast/->lift (ir-ast/->apply matches [(ir-ast/->quote '(a b))])))))
 
-
 (clojure.pprint/pprint
  (clj-gen/generate
   (ir-gen/generate
    (evalmsg []
             (ir-ast/->run (ir-ast/->literal 0) (ir-ast/->lift (ir-ast/->apply matches [(ir-ast/->quote '(a b))]))))
    nil)))
-
-(fn unnamed2125021256 [output21257 data21258]
-  (let* [unnamed-let21259 (count data21258)
-         unnamed-let21260 (int unnamed-let21259)
-         unnamed-let21261 (. output21257 writeByte unnamed-let21260)
-         unnamed-let21262 (fn* loop2125421263 [seq_2124621264 chunk_2124721265 count_2124821266 i_2124921267]
-                               (if (< i_2124921267 count_2124821266)
-                                 (let* [unnamed-let21270 (. chunk_2124721265 nth i_2124921267)
-                                        unnamed-let21271 (get unnamed-let21270 ::first-name)
-                                        unnamed-let21272 (int unnamed-let21271)
-                                        unnamed-let21273 (. output21257 writeByte unnamed-let21272)
-                                        unnamed-let21274 (get unnamed-let21270 ::last-name)
-                                        unnamed-let21275 (int unnamed-let21274)
-                                        unnamed-let21276 (. output21257 writeByte unnamed-let21275)
-                                        unnamed-let21277 (unchecked-inc i_2124921267)]
-                                   (loop2125421263 seq_2124621264 chunk_2124721265 count_2124821266 unnamed-let21277))
-                                 (if (seq seq_2124621264) 
-                                   (if (chunked-seq? unnamed-let21279)
-                                     (let* [unnamed-let21283 (chunk-first unnamed-let21279)
-                                            unnamed-let21284 (chunk-rest unnamed-let21279)
-                                            unnamed-let21285 (count unnamed-let21283)
-                                            unnamed-let21286 (int unnamed-let21285)]
-                                       (loop2125421263 unnamed-let21284 unnamed-let21283 unnamed-let21286 0))
-                                     (let* [unnamed-let21288 (first unnamed-let21279)
-                                            unnamed-let21289 (get unnamed-let21288 ::first-name)
-                                            unnamed-let21290 (int unnamed-let21289)
-                                            unnamed-let21291 (. output21257 writeByte unnamed-let21290)
-                                            unnamed-let21292 (get unnamed-let21288 ::last-name)
-                                            unnamed-let21293 (int unnamed-let21292)
-                                            unnamed-let21294 (. output21257 writeByte unnamed-let21293)
-                                            unnamed-let21295 (next unnamed-let21279)]
-                                       (loop2125421263 unnamed-let21295 nil 0 0))))))
-         unnamed-let21297 (seq data21258)]
-    (unnamed-let21262 unnamed-let21297 nil 0 0)))
 
 (let [ir (ir-parser/parse
           (fn write-formatted! [format]
@@ -130,30 +93,6 @@
       (println (clj-gen/generate clj-ast))
       (println))))
 
-(parse (fn read-formatted! [format input]
-         (condp = (::type format)
-           ;; TODO this could be a multi-method
-           ::primitive (condp #(= %1 %2) (::primitive-type format)
-                         ;; TODO this could be a multi-method
-                         ::int8 (.readByte input)
-                         ::int64 (.readLong input))
-           ::record (loop [attributes (::attributes format)
-                           data (lift (transient {}))]
-                      ;; TODO this loop could be a reduce?
-                      (if (seq attributes)
-                        (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
-                          (recur (rest attributes)
-                                 (lift (assoc! data attribute-name (read-formatted! attribute-format input)))))
-                        (lift (persistent! data))))
-           ::vector (let [{:keys [::index-format ::value-format]} format]
-                      ;; TODO this could be a reduce
-                      (loop [remaining-items (read-formatted! index-format input)
-                             data (lift (transient []))]
-                        (if (pos? remaining-items)
-                          (recur (dec remaining-items)
-                                 (lift (conj! data (read-formatted! value-format input))))
-                          (persistent! data)))))))
-
 (defn write-formatted! [format]
   (fn [output data]
     (condp = (get format ::type)
@@ -185,9 +124,10 @@
                             (assoc! data attribute-name (read-formatted! attribute-format input))))
                    (lift (persistent! data))))
       ::vector (let [{:keys [::index-format ::value-format]} format]
-                 (loop [remaining-items (read-formatted! index-format input)
-                        data (transient [])]
-                   (if (pos? remaining-items)
-                     (lift (recur (dec remaining-items)
-                                  (conj! data (read-formatted! value-format input))))
-                     (lift (persistent! data))))))))
+                 (lift-loop
+                  (loop [remaining-items (read-formatted! index-format input)
+                         data (transient [])]
+                    (if (pos? remaining-items)
+                      (recur (dec remaining-items)
+                             (conj! data (read-formatted! value-format input)))
+                      (persistent! data))))))))
