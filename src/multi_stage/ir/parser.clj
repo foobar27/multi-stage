@@ -86,16 +86,17 @@
       (->do bodies))))
 
 (defmethod destructured-sexp->ir 'let* [_ {:keys [bindings bodies]} sym->index recur-target-variable]
-  (if-let [[[k v] & bindings] bindings]
-    (let [v (sexp->ir v sym->index recur-target-variable) ;; must be done with the old sym->index
-          sym->index (push-var sym->index k)]
-      (->let v
-             (destructured-sexp->ir 'let*
-                                    {:bindings bindings ;; remaining bindings
-                                     :bodies bodies}
-                                    sym->index
-                                    recur-target-variable)
-             k))
+  (if (seq bindings)
+    (let [[[k v] & bindings] bindings]
+      (let [v (sexp->ir v sym->index recur-target-variable) ;; must be done with the old sym->index
+            sym->index (push-var sym->index k)]
+        (->let v
+               (destructured-sexp->ir 'let*
+                                      {:bindings bindings ;; remaining bindings
+                                       :bodies bodies}
+                                      sym->index
+                                      recur-target-variable)
+               k)))
     ;; base case of recursion (implicit do)
     (destructured-sexp->ir 'do
                            {:bodies bodies}
