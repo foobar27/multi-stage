@@ -82,8 +82,7 @@
     (is (= (->let* [['x (smart-literal 42)]]
              [(smart-if (smart-literal 43)
                         (smart-literal 1)
-                        (smart-literal 2))
-              []]
+                        (smart-literal 2))]
              [])
            (smart-let* [['x (smart-literal 42)]
                         ['a (smart-literal 43)]]

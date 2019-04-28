@@ -24,9 +24,10 @@
 (deftest let-test
   (testing "Simple let"
     (verify-parse
-     (let [x (->variable 0 "x")]
+     (let [x (->variable 0)]
        (->let (->literal 1)
-              (->primitive-call `+ [x x])))
+              (->primitive-call `+ [x x])
+              'x))
      (let [x 1]
        (+ x x))))
   (testing "Empty let should be discarded"
@@ -37,9 +38,11 @@
   (testing "let with two dependent bindings"
     (verify-parse
      (->let (->literal 1)
-            (->let (->variable 0 "x")
-                   (->primitive-call `+ [(->variable 0 "x")
-                                         (->variable 1 "y")])))
+            (->let (->variable 0)
+                   (->primitive-call `+ [(->variable 0)
+                                         (->variable 1)])
+                   'y)
+            'x)
      (let [x 1
            y x]
        (+ x y)))))
@@ -47,59 +50,86 @@
 (deftest fn-test
   (testing "one  argument"
     (verify-parse
-     (let [x (->variable 1 "x")]
-       (->lambda (->primitive-call `+ [x
-                                       (->primitive-call `* [x x])])))
-     (fn [x]
+     (let [x (->variable 1)]
+       (->lambda 1
+                 (->primitive-call `+ [x
+                                       (->primitive-call `* [x x])])
+                 'f
+                 '[x]))
+     (fn f [x]
        (+ x (* x x)))))
   (testing "two nested lambdas"
     (verify-parse
-     (let [x (->variable 1 "x")
-           y (->variable 3 "y")]
-       (->lambda (->lambda (->primitive-call `+ [x
-                                                 (->primitive-call `* [y y])]))))
-     (fn [x]
-       (fn [y]
+     (let [x (->variable 1)
+           y (->variable 3)]
+       (->lambda 1
+                 (->lambda 1
+                           (->primitive-call `+ [x
+                                                 (->primitive-call `* [y y])])
+                           
+                           'inner
+                           '[y])
+                 'outer
+                 '[x]))
+     (fn outer [x]
+       (fn inner [y]
          (+ x (* y y))))))
   (testing "fn without argument"
     (verify-parse
-     (->lambda (->literal 1))
-     (fn []
+     (->lambda 0
+               (->literal 1)
+               'f
+               [])
+     (fn f[]
        1)))
   (testing "two arguments"
     (verify-parse
-     (->lambda (->lambda (->primitive-call `+ [(->variable 1 "x")
-                                               (->variable 3 "y")])))
-     (fn [x y]
+     (->lambda 2
+               (->primitive-call `+ [(->variable 1)
+                                     (->variable 2)])
+               'f
+               '[x y])
+     (fn f [x y]
        (+ x y))))
   (testing "fn* via reader macro"
     ;; This usess the syntax (fn* [x] (+ x 1))
     ;; (without the parenthesis which would be used for multiple arities)
     (verify-parse
-     (->lambda (->primitive-call `+ [(->variable 1 "p1")
-                                     (->literal 1)]))
+     (->lambda 1
+               (->primitive-call `+ [(->variable 1)
+                                     (->literal 1)])
+               'unnamed
+               '[p1])
      #(+ % 1))))
 
 (deftest apply-test
   (testing "1 argument"
     (verify-parse
-     (->apply (->lambda (->primitive-call `+ [(->literal 1)
-                                              (->variable 1 "x")]))
+     (->apply (->lambda 1
+                        (->primitive-call `+ [(->literal 1)
+                                              (->variable 1)])
+                        'f
+                        '[x])
               [(->literal 5)])
-     ((fn [x] (+ 1 x))
+     ((fn f [x] (+ 1 x))
       5)))
   (testing "2 arguments"
     (verify-parse
-     (->apply (->apply (->lambda (->lambda (->primitive-call `+ [(->variable 1 "x")
-                                                                 (->variable 3 "y")])))
-                       [(->literal 3)])
-              [(->literal 4)])
-     ((fn [x y] (+ x y))
+     (->apply (->lambda 2
+                        (->primitive-call `+ [(->variable 1)
+                                              (->variable 2)])
+                        'f
+                        '[x y])
+              [(->literal 3) (->literal 4)])
+     ((fn f [x y] (+ x y))
       3 4)))
   (testing "recursive apply fn"
     (verify-parse
-     (->apply (->lambda (->apply (->variable 0 "f")
-                                 [(->variable 1 "x")]))
+     (->apply (->lambda 1
+                        (->apply (->variable 0)
+                                 [(->variable 1)])
+                        'f
+                        '[x])
               [(->literal 5)])
      ((fn f [x]
         (f x))
@@ -108,7 +138,7 @@
 (deftest conditions-test
   (testing "3 arguments"
     (verify-parse
-     (->if (->literal 3)
+     (->if (->literal 1)
            (->literal 2)
            (->literal 3))
      (if 1 2 3)))
@@ -122,17 +152,24 @@
 (deftest loop-recur-test
   (testing "one argument"
     (verify-parse
-     (->apply (->lambda (->apply (->variable 0 "loop")
-                                 [(->primitive-call `inc [(->variable 1 "x")])]))
+     (->apply (->lambda 1
+                        (->apply (->variable 0)
+                                 [(->primitive-call `inc [(->variable 1)])])
+                        'loop
+                        '[x])
               [(->literal 1)])
      (loop [x 1]
        (recur (inc x)))))
   (testing "shadowing"
     (verify-parse
      (->let (->literal 1)
-            (->apply (->lambda (->apply (->variable 1 "loop")
-                                        [(->primitive-call `inc [(->variable 2 "x")])]))
-                     [(->variable 0 "x")]))
+            (->apply (->lambda 1
+                               (->apply (->variable 1)
+                                        [(->primitive-call `inc [(->variable 2)])])
+                               'loop
+                               '[x])
+                     [(->variable 0)])
+            'unnamed-let)
      (let [x 1]
        (loop [x x]
          (recur (inc x)))))))
@@ -140,6 +177,3 @@
 ;; TODO test recur target shadowing
 
 
-(->apply (->lambda (->apply (->variable 0 loop19401) [(->primitive-call clojure.core/inc ((->variable 1 x)))])) [(->literal 1)])
-
-(meliae.patterns/print-pattern (parse (loop [x 1] (recur (inc x)))))

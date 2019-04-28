@@ -15,7 +15,3 @@
 
 (meliae.patterns/print-pattern (ir-gen/generate (parse (let [x 1] (loop [x x] (recur (inc x))))) nil))
 
-(->call
- (->fn* G__20305 ({:args [G__20306],
-                   :bodies [#multi-stage.clojure.ast.Expression{:meliae.patterns/kind :multi-stage.clojure.ast/call, :multi-stage.clojure.ast/function #multi-stage.clojure.ast.Expression{:meliae.patterns/kind :multi-stage.clojure.ast/variable, :multi-stage.clojure.ast/symbol G__20305}, :multi-stage.clojure.ast/arguments [#multi-stage.clojure.ast.Expression{:meliae.patterns/kind :multi-stage.clojure.ast/invoke, :multi-stage.clojure.ast/function #multi-stage.clojure.ast.Expression{:meliae.patterns/kind :multi-stage.clojure.ast/literal, :multi-stage.clojure.ast/value clojure.core/inc}, :multi-stage.clojure.ast/args (#multi-stage.clojure.ast.Expression{:meliae.patterns/kind :multi-stage.clojure.ast/variable, :multi-stage.clojure.ast/symbol G__20306}), :multi-stage.clojure.ast/tail-call? true}]}]}))
- [(->literal 1)])
