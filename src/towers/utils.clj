@@ -23,3 +23,11 @@
 
 (defmacro check-not-nil [x & args]
   `(or ~x (throw (IllegalArgumentException. (str ~@args)))))
+
+(defn into! [to from]
+  (loop [from from
+         to to]
+    (if (seq from)
+      (recur (rest from)
+             (conj! to (first from)))
+      to)))

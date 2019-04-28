@@ -10,12 +10,12 @@
   ([e recur-target]
    (match* [e]
      
-     [(->literal value)]
+     [(->literal value used-symbols)]
      (if ((some-fn number? string? keyword? boolean? symbol? nil?) value)
        value
        `(quote ~value))
 
-     [(->let* bindings bodies)]
+     [(->let* bindings bodies used-symbols)]
      ;; recur-target might be shadowed by any binding.
      ;; Shadowing should never happen for code generated from "ir",
      ;; but we want to be sure to reset the recur target in such cases.
@@ -31,34 +31,34 @@
                                 binding-recur-targets))]
           ~@(doall (map #(generate % recur-target) bodies))))
 
-     [(->do bodies)]
+     [(->do bodies used-symbols)]
      `(do ~@(doall (map #(generate % recur-target) bodies)))
      
-     [(->if condition then (->literal nil))]
+     [(->if condition then (->literal nil used-symbols-literal) used-symbols-if)]
      `(if ~(generate condition recur-target)
         ~(generate then recur-target))
 
-     [(->if condition then else)]
+     [(->if condition then else used-symbols)]
      `(if ~(generate condition recur-target)
         ~(generate then recur-target)
         ~(generate else recur-target))
 
-     [(->variable symbol)]
+     [(->variable symbol used-symbols)]
      symbol
 
-     [(->new class-name arguments)]
+     [(->new class-name arguments used-symbols)]
      `(new ~class-name ~@(doall (map #(generate % recur-target) arguments)))
 
-     [(->class-reference class-name)]
+     [(->class-reference class-name used-symbols)]
      class-name
      
-     [(->dot object method-name arguments)]
+     [(->dot object method-name arguments used-symbols)]
      `(. ~(generate object recur-target) ~method-name ~@(doall (map #(generate % recur-target) arguments)))
 
-     [(->throw ee)]
+     [(->throw ee used-symbols)]
      `(throw ~(generate ee recur-target))
      
-     [(->invoke f args tail-call?)]
+     [(->invoke f args tail-call? used-symbols)]
      (let [f (generate f recur-target)]
        (if (and tail-call?
                 (= f recur-target))
@@ -66,7 +66,7 @@
          `(~(symbol "recur") ~@(doall (map #(generate % recur-target) args)))
          `(~f ~@(doall (map #(generate % recur-target) args)))))
 
-     [(->fn* f-name signatures)]
+     [(->fn* f-name signatures used-symbols)]
      (if (= 1 (count signatures))
        ;; Use simplified form if only one signature.
        `(fn* ~f-name

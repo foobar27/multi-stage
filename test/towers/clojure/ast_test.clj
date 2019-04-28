@@ -5,75 +5,102 @@
 
 (stest/instrument (stest/enumerate-namespace 'towers.clojure.ast))
 
+(deftest test-dfs-order
+  (testing "(+ x (a b) y)"
+    (is (= (->invoke (smart-variable `+)
+                     [(smart-variable 'x)
+                      (->invoke (smart-variable `+)
+                                [(smart-variable 'a)
+                                 (smart-variable 'b)]
+                                false
+                                ['a 'b `+])
+                      (smart-variable 'y)]
+                     true
+                     ['x 'a 'b `+ 'y `+])
+           (smart-invoke (smart-variable `+)
+                         [(smart-variable 'x)
+                          (smart-invoke (smart-variable `+)
+                                        [(smart-variable 'a)
+                                         (smart-variable 'b)])
+                          (smart-variable 'y)])))))
+
 (deftest test-smart-do
   (testing "empty bodies"
-    (is (->literal nil)
-        (smart-do [])))
+    (is (= (smart-literal nil)
+           (smart-do []))))
   (testing "one body"
-    (is (= (->variable 'a)
-           (smart-do [(->variable 'a)]))))
+    (is (= (smart-variable 'a)
+           (smart-do [(smart-variable 'a)]))))
   (testing "two bodies"
-    (is (= (->do [(->variable 'a)
-                  (->variable 'b)])
-           (smart-do [(->variable 'a) (->variable 'b)]))))
+    (is (= (->do [(smart-variable 'a)
+                  (smart-variable 'b)]
+                 '[a b])
+           (smart-do [(smart-variable 'a) (smart-variable 'b)]))))
   (testing "three bodies"
-    (is (= (->do [(->variable 'a)
-                  (->variable 'b)
-                  (->variable 'c)])
-           (smart-do [(->variable 'a) (smart-do [(->variable 'b) (->variable 'c)])])))
-    (is (= (->do [(->variable 'a)
-                  (->variable 'b)
-                  (->variable 'c)])
-           (smart-do [(smart-do [(->variable 'a) (->variable 'b)]) (->variable 'c)])))))
+    (is (= (->do [(smart-variable 'a)
+                  (smart-variable 'b)
+                  (smart-variable 'c)]
+                 '[a b c ])
+           (smart-do [(smart-variable 'a) (smart-do [(smart-variable 'b) (smart-variable 'c)])])))
+    (is (= (->do [(smart-variable 'a)
+                  (smart-variable 'b)
+                  (smart-variable 'c)]
+                 '[a b c])
+           (smart-do [(smart-do [(smart-variable 'a) (smart-variable 'b)]) (smart-variable 'c)])))))
 
 (deftest test-smart-let*
   (testing "no arguments"
-    (is (= (->literal 1)
-           (smart-let* [] [(->literal 1)]))))
+    (is (= (smart-literal 1)
+           (smart-let* [] [(smart-literal 1)]))))
   (testing "simple 1-arg case"
-    (is (= (->let* [['a (->literal 1)]]
-             [(->literal 2)])
-           (smart-let* [['a (->literal 1)]]
-             [(->literal 2)]))))
+    (is (= (->let* [['a (smart-literal 1)]]
+             [(smart-literal 2)]
+             [])
+           (smart-let* [['a (smart-literal 1)]]
+             [(smart-literal 2)]))))
   (testing "implicit do, 1 binding"
-    (is (= (->let* [['a (->literal 1)]]
-             [(->literal 2)
-              (->literal 3)])
-           (smart-let* [['a (->literal 1)]]
-             [(smart-do [(->literal 2)
-                         (->literal 3)])]))))
+    (is (= (->let* [['a (smart-literal 1)]]
+             [(smart-literal 2)
+              (smart-literal 3)]
+             [])
+           (smart-let* [['a (smart-literal 1)]]
+             [(smart-do [(smart-literal 2)
+                         (smart-literal 3)])]))))
   (testing "(let [a 1] a)"
-    (is (= (->literal 1)
-           (smart-let* [['a (->literal 1)]]
-             [(->variable 'a)]))))
+    (is (= (smart-literal 1)
+           (smart-let* [['a (smart-literal 1)]]
+             [(smart-variable 'a)]))))
 
   (testing "(let [x 42 a 1] a)"
-    (is (= (->let* [['x (->literal 42)]]
-             [(->literal 1)])
-           (smart-let* [['x (->literal 42)]
-                        ['a (->literal 1)]]
-             [(->variable 'a)]))))
+    (is (= (->let* [['x (smart-literal 42)]]
+             [(smart-literal 1)]
+             [])
+           (smart-let* [['x (smart-literal 42)]
+                        ['a (smart-literal 1)]]
+             [(smart-variable 'a)]))))
   (testing "(let [x 42 a 1] (if a 1 2))"
-    (is (= (->let* [['x (->literal 42)]]
-             [(->if (->literal 43)
-                    (->literal 1)
-                    (->literal 2))])
-           (smart-let* [['x (->literal 42)]
-                        ['a (->literal 43)]]
-             [(smart-if (->variable 'a)
-                        (->literal 1)
-                        (->literal 2))]))))
+    (is (= (->let* [['x (smart-literal 42)]]
+             [(smart-if (smart-literal 43)
+                        (smart-literal 1)
+                        (smart-literal 2))
+              []]
+             [])
+           (smart-let* [['x (smart-literal 42)]
+                        ['a (smart-literal 43)]]
+             [(smart-if (smart-variable 'a)
+                        (smart-literal 1)
+                        (smart-literal 2))]))))
   (testing "undo let-insertion"
-    (is (= (->invoke `+
-                     [(->literal 4)
-                      (->literal 5)]
-                     false)
-           (smart-let* [['x (->literal 4)]
-                        ['y (->literal 5)]]
-             [(->invoke `+
-                        [(->variable 'x)
-                         (->variable 'y)]
-                        false)])))
+    (is (= (->invoke (smart-variable `+)
+                     [(smart-literal 4)
+                      (smart-literal 5)]
+                     false
+                     '[])
+           (smart-let* [['x (smart-literal 4)]
+                        ['y (smart-literal 5)]]
+             [(smart-invoke (smart-variable `+)
+                            [(smart-variable 'x)
+                             (smart-variable 'y)])])))
     )
   )
 
