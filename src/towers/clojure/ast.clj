@@ -263,6 +263,33 @@
             ;; other smart constructors are responsible for setting this back to false
             true))
 
+(s/fdef smart-dot
+  :args (s/cat :object ::expression
+               :method-name symbol?
+               :arguments (s/coll-of ::expression))
+  :ret ::expression)
+(defn smart-dot [object method-name arguments]
+  (->dot object method-name (vec arguments)))
+
+(s/fdef smart-throw
+  :args (s/cat :exception ::expression)
+  :ret ::expression)
+(defn smart-throw [exception]
+  (->throw exception))
+
+(s/fdef smart-class-reference
+  :args (s/cat :class-name symbol?)
+  :ret ::expression)
+(defn smart-class-reference [class-name]
+  (->class-reference class-name))
+
+(s/fdef smart-new
+  :args (s/cat :class-name symbol?
+               :arguments (s/coll-of ::expression))
+  :ret ::expression)
+(defn smart-new [class-name arguments]
+  (->new class-name arguments))
+
 (s/fdef smart-variable
   :args (s/cat :sym symbol?)
   :ret ::expression)
@@ -283,3 +310,4 @@
                      (rest chunks)
                      chunks)]
     (->fn* name signatures)))
+

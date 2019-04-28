@@ -48,18 +48,18 @@
                         (map #(generate % index->sym) arguments))
 
       [(->dot object method-name arguments)]
-      (clj/->dot (generate object index->sym)
-                 method-name
-                 (vec (map #(generate % index->sym) arguments)))
+      (clj/smart-dot (generate object index->sym)
+                     method-name
+                     (map #(generate % index->sym) arguments))
 
       [(->class-reference class-name)]
-      (clj/->class-reference class-name)
+      (clj/smart-class-reference class-name)
       
       [(->throw exception)]
-      (clj/->throw (generate exception index->sym))
+      (clj/smart-throw (generate exception index->sym))
 
       [(->new class-name arguments)]
-      (clj/->new class-name (vec (map #(generate % index->sym) arguments)))
+      (clj/smart-new class-name (vec (map #(generate % index->sym) arguments)))
       
       [(->closure arity env ee original-function-name original-argument-names)]
       (if (seq env)
