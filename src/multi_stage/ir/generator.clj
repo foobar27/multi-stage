@@ -6,8 +6,9 @@
             [meliae.patterns :refer [match*]]))
 
 (defn generate [e index->sym]
-  (meliae.patterns/print-pattern e)
-  (println)
+  (comment
+    (meliae.patterns/print-pattern e)
+    (println))
   (let [index->sym (vec index->sym)]
     (match* [e]
       
