@@ -14,7 +14,6 @@
   literal  [value any?]
   variable [symbol symbol?]
   let*     [bindings (s/coll-of ::let-binding) bodies (s/coll-of ::expression)]
-  loop*    [bindings (s/coll-of ::let-binding) bodies (s/coll-of ::expression)]
   throw    [exception ::expression]
   do       [bodies (s/coll-of ::expression)]
   if       [condition ::expression then ::expression else ::expression]
@@ -78,11 +77,6 @@
       (= s sym)
 
       [(->let* bindings bodies)]
-      ;; TODO one of the bindings could shadow subsequent usages
-      (or (some uses-this-symbol? (map second bindings))
-          (some uses-this-symbol? bodies))
-      
-      [(->loop* bindings bodies)]
       ;; TODO one of the bindings could shadow subsequent usages
       (or (some uses-this-symbol? (map second bindings))
           (some uses-this-symbol? bodies))
