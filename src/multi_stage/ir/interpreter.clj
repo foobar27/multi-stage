@@ -228,7 +228,7 @@
                          (fn build-ast [[exception]]
                            (->throw exception))
                          (fn to-string [[exception]]
-                           ("Throw exception " (pattern->string exception))))
+                           (str "Throw exception " (pattern->string exception))))
       
       [(->new class-name args)]
       (process-arguments env
