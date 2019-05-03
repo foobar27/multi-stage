@@ -24,7 +24,8 @@
                                   sym))
 
 (def primitive-fns #{`get `seq `seq? `chunked-seq? `first `chunk-first `rest `chunk-rest `next `nth
-                     `+ `- `* `/ `inc `dec
+                     `assoc! `conj! `transient `persistent!
+                     `+ `- `* `/ `inc `dec `pos?
                      `= `< `> `int `long `str `count
                      `unchecked-inc `unchecked-add `unchecked-add-int `unchecked-byte
                      `unchecked-char `unchecked-dec `unchecked-dec-int `unchecked-divide-int
@@ -174,6 +175,9 @@
 
 (defmethod destructured-sexp->ir 'throw [_ {:keys [exception]} sym->index recur-target-variable]
   (->throw (sexp->ir exception sym->index recur-target-variable)))
+
+(defmethod destructured-sexp->ir 'quote [_ {:keys [value]} sym->index recur-target-variable]
+  (->quote value))
 
 (defn clj->ir [sexp]
   (sexp->ir (macroexpand-all sexp) {} nil))
