@@ -214,7 +214,7 @@
                          (fn evaluate-now [[object & args]]
                            (invoke-method object method-name args))
                          (fn build-ast [[object & args]]
-                           (->dot object method-name args))
+                           (->dot object method-name (or args [])))
                          (fn to-string [[object & args]]
                            (str "Call to method " method-name
                                 " on object " (pattern->string object)
