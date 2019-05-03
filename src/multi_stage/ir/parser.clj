@@ -48,31 +48,35 @@
         (throw (IllegalArgumentException. (str "Unknown symbol: " sexp))))
 
     (seq? sexp)
-    (let [[f & args] sexp]
-      (or
-       (when (symbol? f)
-         (or
-          ;; Clojure special form (unresolved symbol)
-          (when-let [destructured (destructure-clj f args)]
-            (destructured-sexp->ir f destructured sym->index recur-target-variable))
-          ;; Component-wise constructors
-          (let [resolved-f (resolve-symbol f)
-                parsed-args (map #(sexp->ir % sym->index recur-target-variable) args)]
-            (or
-             (when-let [ctor (get {`lift ->lift, `run ->run} resolved-f)]
-               (apply ctor parsed-args))
-             (when (= `lift-loop resolved-f)
-               (match* [(vec parsed-args)]
-                 [[(->apply the-lambda lambda-arguments)]]
-                 (->apply (->lift the-lambda) lambda-arguments)))
-             ;; Primitive function call
-             (when (contains? primitive-fns resolved-f)
-               (->primitive-call resolved-f parsed-args))))))
-       ;; Function call
-       (when-let [resolved-f (sexp->ir f sym->index recur-target-variable)]
-         (let [args (seq (map #(sexp->ir % sym->index recur-target-variable) args))]
-           (->apply resolved-f args)))
-       (throw (IllegalArgumentException. "Unknown symbol: " f))))
+    (if (seq sexp)
+      (let [[f & args] sexp]
+        (or
+         (when (symbol? f)
+           (or
+            ;; Clojure special form (unresolved symbol)
+            (when-let [destructured (destructure-clj f args)]
+              (destructured-sexp->ir f destructured sym->index recur-target-variable))
+            ;; Component-wise constructors
+            (let [resolved-f (resolve-symbol f)
+                  parsed-args (map #(sexp->ir % sym->index recur-target-variable) args)]
+              (or
+               (when-let [ctor (get {`lift ->lift, `run ->run} resolved-f)]
+                 (apply ctor parsed-args))
+               (when (= `lift-loop resolved-f)
+                 (match* [(vec parsed-args)]
+                   [[(->apply the-lambda lambda-arguments)]]
+                   (->apply (->lift the-lambda) lambda-arguments)))
+               ;; Primitive function call
+               (when (contains? primitive-fns resolved-f)
+                 (->primitive-call resolved-f parsed-args))))))
+         ;; Function call
+         (when-let [resolved-f (sexp->ir f sym->index recur-target-variable)]
+           (let [args (seq (map #(sexp->ir % sym->index recur-target-variable) args))]
+             (->apply resolved-f args)))
+         (throw (IllegalArgumentException. "Unknown symbol: " f))))
+      ;; An empty list () evaluates to itself
+      ;; The same applies for empty maps, sets and vectors.
+      (->literal sexp))
 
     true
     (throw (IllegalArgumentException. (str "Don't know how to parse: " sexp)))))
