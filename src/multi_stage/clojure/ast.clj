@@ -87,7 +87,7 @@
       expression)))
 
 (defn- uses-symbol? [e s]
-  (contains? (::used-symbols e) s))
+  (some #{s} (::used-symbols e)))
 
 (declare smart-if)
 
