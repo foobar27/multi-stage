@@ -120,7 +120,7 @@
     ;;  Rep[A]=>Rep[B]  ==> Rep[A=>B]
     [(->closure arity body-env body original-function-name original-argument-names)]
     (-> (->lambda arity
-                  (-> #(verify-code
+                  (-> #(verify-code-or-lift-constant
                         (evalms (into (vec body-env)
                                       (repeatedly (inc arity) (fn [] (->code (fresh!)))))
                                 body))
