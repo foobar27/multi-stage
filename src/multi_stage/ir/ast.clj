@@ -41,10 +41,6 @@
 
 (defmultipattern value)
 (defpatterns value
-  ;; TODO why uppercase?
-  TRUE  []
-  FALSE  []
-  NIL []
   constant  [value any?]
   closure   [arity integer?
              env ::environment
