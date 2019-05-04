@@ -4,7 +4,7 @@
             [multi-stage.reflection :refer [invoke-constructor invoke-method]]
             [multi-stage.ir.ast :refer [;; expression constructors
                                         ->literal ->variable ->lambda ->apply ->primitive-call ->let ->if ->do
-                                        ->lift ->run ->quote ->throw ->new ->dot
+                                        ->lift ->run ->quote ->throw ->new ->dot ->symbol
                                         ;; value constructors
                                         ->constant ->closure ->code code?]
              :as ast]
@@ -182,6 +182,9 @@
       
       [(->variable n)]
       (nth env n)
+
+      [(->symbol x)]
+      (->symbol x)
       
       [(->lambda arity body original-function-name original-argument-names)]
       (->closure arity env body original-function-name original-argument-names)
@@ -243,12 +246,24 @@
                            (->new class-name args))
                          (fn to-string [args]
                            (str "Constructor for " class-name " with arguments " (patterns->string args))))
-      
+
       [(->apply function arguments)]
       (let [function (evalms env function)
             arguments (doall (map #(evalms env %) arguments))]
         (match* [function]
 
+          ;; Disguised primitive call
+          [(->symbol f)]
+          (cond
+            (every? ast/constant? arguments)
+            (->constant (apply (resolve f) (map ::ast/value arguments)))
+
+            (every? (some-fn ast/code? ast/constant?) arguments)
+            (reflectc (->primitive-call f (map remove-code-lift-constant arguments)))
+
+            true (throw (IllegalArgumentException. (str "Unhandled case for disguised primitive call to " f
+                                                        " with args " (patterns->string arguments)))))
+          
           [(->closure arity body-env body original-function-name original-argument-names)]
           (if (= arity (count arguments))
             (evalms (into (conj (vec body-env)

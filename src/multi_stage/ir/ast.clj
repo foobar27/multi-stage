@@ -17,6 +17,7 @@
 (defmultipattern expression)
 (defpatterns expression
   literal   [n any?]
+  symbol    [name symbol?]
   variable  [level ::integer]
   class-reference [class-name symbol?]
   let       [e1 ::expression e2 ::expression original-name symbol?]

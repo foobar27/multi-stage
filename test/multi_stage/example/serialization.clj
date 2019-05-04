@@ -75,10 +75,9 @@
 (specialize
  (fn write-formatted! [format]
    (fn [output data]
-     ;; TODO use = as lambda reference
-     (condp #(= %1 %2) (get format ::type)
+     (condp = (get format ::type)
        ;; TODO this could be a multi-method
-       ::primitive (condp #(= %1 %2) (get format ::primitive-type)
+       ::primitive (condp = (get format ::primitive-type)
                      ;; TODO this could be a multi-method
                      ::int8 (.writeByte output (int data)) ;; the int-cast is not a mistake, check the signature
                      ::int64 (.writeLong output (long data)))
@@ -93,10 +92,9 @@
 (let [ir (ir-parser/parse
           (fn write-formatted! [format]
             (fn [output data]
-              ;; TODO use = as lambda reference
-              (condp #(= %1 %2) (get format ::type)
+              (condp = (get format ::type)
                 ;; TODO this could be a multi-method
-                ::primitive (condp #(= %1 %2) (get format ::primitive-type)
+                ::primitive (condp = (get format ::primitive-type)
                               ;; TODO this could be a multi-method
                               ::int8 (.writeByte output (int data)) ;; the int-cast is not a mistake, check the signature
                               ::int64 (.writeLong output (long data)))

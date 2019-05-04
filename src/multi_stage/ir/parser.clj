@@ -1,5 +1,5 @@
 (ns multi-stage.ir.parser
-  (:require [multi-stage.ir.ast :refer [->literal ->variable ->do ->let ->lambda ->apply ->dot ->new
+  (:require [multi-stage.ir.ast :refer [->literal ->variable ->do ->let ->lambda ->apply ->dot ->new ->symbol
                                         ->if ->lift ->run ->primitive-call ->quote ->throw ->class-reference]
              :as ast]
             [clojure.walk :refer [macroexpand-all]]
@@ -38,13 +38,17 @@
         (char? sexp)
         (number? sexp)
         (nil? sexp)
+        (keyword? sexp)
         (contains? #{true false} sexp))
     (->literal sexp)
-    
+
     (symbol? sexp)
     (or (get-var sym->index sexp)
         (if (class? (resolve sexp ))
           (->class-reference sexp))
+        (let [s (resolve-symbol sexp)]
+          (if (contains? primitive-fns s)
+            (->symbol s)))
         (throw (IllegalArgumentException. (str "Unknown symbol: " sexp))))
 
     (seq? sexp)

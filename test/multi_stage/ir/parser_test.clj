@@ -14,6 +14,37 @@
   `(let [expected# ~expected]
      (verify-pattern (parse ~input) expected#)))
 
+(deftest constants
+  (testing "string"
+    (verify-parse
+     (->literal "hello")
+     "hello"))
+  (testing "keyword"
+    (verify-parse
+     (->literal :foo)
+     :foo))
+  (testing "character"
+    (verify-parse
+     (->literal \c)
+     \c))
+  (testing "single values"
+    (testing "true"
+      (verify-parse
+       (->literal true)
+       true))
+    (testing "false"
+      (verify-parse
+       (->literal false)
+       false))
+    (testing "nil"
+      (verify-parse
+       (->literal nil)
+       nil))
+    (testing "empty list"
+      (verify-parse
+       (->literal '())
+       ()))))
+
 (deftest primitive-call-test
   (testing "plus"
     (testing "(+ 1 2)"
@@ -45,7 +76,28 @@
             'x)
      (let [x 1
            y x]
-       (+ x y)))))
+       (+ x y))))
+  (testing "shadowing let"
+    (verify-parse
+     (->let (->literal 1)
+            (->let (->literal 2)
+                   (->variable 1)
+                   'x)
+            'x)
+     (let [x 1
+           x 2]
+       x)))
+  (testing "override + with * via let"
+    (verify-parse
+     (->let (->lambda 2
+                      (->primitive-call `* [(->variable 1) (->variable 2)])
+                      'mul
+                      '[x y])
+            (->apply (->variable 0)
+                     [(->literal 5) (->literal 2)])
+            '+)
+     (let [+ (fn mul [x y] (* x y))]
+       (+ 5 2)))))
 
 (deftest fn-test
   (testing "one  argument"
