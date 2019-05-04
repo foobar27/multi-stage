@@ -1,5 +1,6 @@
 (ns multi-stage.ir.interpreter
   (:refer-clojure :exclude [reify])
+  (:import [clojure.lang ArityException])
   (:require [clojure.spec.alpha :as s]
             [multi-stage.reflection :refer [invoke-constructor invoke-method]]
             [multi-stage.ir.ast :refer [;; expression constructors
@@ -172,7 +173,7 @@
   :ret ::ast/value)
 (defn evalms [env e]
   (do
-    (comment (println "evalms " (pattern->string e)))
+    (println "evalms " (pattern->string e))
     (match* [e]
       [(->literal n)]
       (->constant n)
@@ -248,17 +249,35 @@
                            (str "Constructor for " class-name " with arguments " (patterns->string args))))
 
       [(->apply function arguments)]
-      (let [function (evalms env function)]
+      (let [function (evalms env function)
+            number-of-arguments (count arguments)]
         (or (match* [function]
               [(->symbol f)]
               (evalms env (->primitive-call f arguments))
 
               [(->constant x)]
-              (if (keyword? x)
+              (cond
+                
+                (or (keyword? x) (symbol? x))
                 ;; (:foo m optional-default) => (get m :foo optional-default)
                 (let [[m & argumnts] arguments]
-                  (evalmsg env (->primitive-call `get (into [m (->literal x)] arguments)))))
+                  (evalmsg env (->primitive-call `get (into [m (->literal x)] arguments))))
 
+                (set? x)
+                (if (= number-of-arguments 1)
+                  (evalmsg env (->dot (->literal x) 'get arguments))
+                  (throw (ArityException. number-of-arguments
+                                          (str "Invalid number of arguments for set invocation: " number-of-arguments))))
+
+                (map? x)
+                (evalmsg env (->dot (->literal x) 'valAt  arguments))
+                
+                (vector? x)
+                (if (= number-of-arguments 1)
+                  (evalmsg env (->primitive-call `nth (into [(->literal x)] arguments)))
+                  (throw (ArityException. number-of-arguments
+                                          (str "Invalid number of arguments for vector invocation: " number-of-arguments)))))
+              
               [(->closure arity body-env body original-function-name original-argument-names)]
               (let [arguments (doall (map #(evalms env %) arguments))]
                 (if (= arity (count arguments))
