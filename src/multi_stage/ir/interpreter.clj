@@ -6,6 +6,7 @@
             [multi-stage.ir.ast :refer [;; expression constructors
                                         ->literal ->variable ->lambda ->apply ->primitive-call ->let ->if ->do
                                         ->lift ->run ->quote ->throw ->new ->dot ->symbol
+                                        ->set ->vector ->map
                                         ;; value constructors
                                         ->constant ->closure ->code code?]
              :as ast]
@@ -173,10 +174,40 @@
   :ret ::ast/value)
 (defn evalms [env e]
   (do
-    (println "evalms " (pattern->string e))
+    (comment (println "evalms " (pattern->string e)))
     (match* [e]
       [(->literal n)]
       (->constant n)
+
+      [(->vector elements)]
+      (process-arguments env
+                         elements
+                         (fn evaluate-now [elements]
+                           (vec elements))
+                         (fn build-ast [elements]
+                           (->vector elements))
+                         (fn to-string [elements]
+                           (str "Literal vector with elements " (patterns->string elements))))
+
+      [(->set elements)]
+      (process-arguments env
+                         elements
+                         (fn evaluate-now [elements]
+                           (set elements))
+                         (fn build-ast [elements]
+                           (->set elements))
+                         (fn to-string [elements]
+                           (str "Literal set with elements " (patterns->string elements))))
+
+      [(->map elements)]
+      (process-arguments env
+                         elements
+                         (fn evaluate-now [elements]
+                           (into {} (map vec elements)))
+                         (fn build-ast [elements]
+                           (->map elements))
+                         (fn to-string [elements]
+                           (str "Literal map with elements " (patterns->string elements))))
 
       [(->quote form)]
       (->constant form)

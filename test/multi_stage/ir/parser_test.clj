@@ -228,4 +228,21 @@
 ;; TODO two arguments
 ;; TODO test recur target shadowing
 
-
+(deftest literal-collections-test
+  (testing "vector"
+    (verify-parse
+     (->vector [(->literal :a)
+                (->literal :b)
+                (->vector [(->literal :c)
+                           (->literal :d)])])
+     [:a :b [:c :d]]))
+  (testing "set"
+    (verify-parse
+     (->set [(->literal :b)
+             (->literal :a)])
+     #{:a :b}))
+  (testing "map"
+    (verify-parse
+     (->map [[(->literal :a) (->literal 1)]
+             [(->literal :b) (->literal 2)]])
+     {:a 1 :b 2})))

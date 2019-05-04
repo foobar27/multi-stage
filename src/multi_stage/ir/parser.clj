@@ -1,6 +1,7 @@
 (ns multi-stage.ir.parser
   (:require [multi-stage.ir.ast :refer [->literal ->variable ->do ->let ->lambda ->apply ->dot ->new ->symbol
-                                        ->if ->lift ->run ->primitive-call ->quote ->throw ->class-reference]
+                                        ->if ->lift ->run ->primitive-call ->quote ->throw ->class-reference
+                                        ->set ->vector ->map]
              :as ast]
             [clojure.walk :refer [macroexpand-all]]
             [meliae.patterns :refer [match*]]
@@ -42,6 +43,17 @@
         (contains? #{true false} sexp))
     (->literal sexp)
 
+    (vector? sexp)
+    (->vector (map #(sexp->ir % sym->index recur-target-variable) sexp))
+
+    (set? sexp)
+    (->set (map #(sexp->ir % sym->index recur-target-variable) sexp))
+
+    (map? sexp)
+    (->map (for [[k v] sexp]
+             [(sexp->ir k sym->index recur-target-variable)
+              (sexp->ir v sym->index recur-target-variable)]))
+    
     (symbol? sexp)
     (or (get-var sym->index sexp)
         (if (class? (resolve sexp ))

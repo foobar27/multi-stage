@@ -1,6 +1,7 @@
 (ns multi-stage.clojure.generator
   (:require [multi-stage.clojure.ast :refer [->do ->let* ->fn* ->literal ->variable
-                                             ->if ->invoke ->dot ->throw ->new ->class-reference]
+                                             ->if ->invoke ->dot ->throw ->new ->class-reference
+                                             ->vector ->set ->map]
              :as ast]
             [meliae.patterns :refer [match*]]))
 
@@ -14,6 +15,18 @@
      (if ((some-fn number? string? keyword? boolean? symbol? nil?) value)
        value
        `(quote ~value))
+
+     [(->vector elements)]
+     (vec (map #(generate % recur-target) elements))
+
+     [(->set elements)]
+     (into #{} (map #(generate % recur-target) elements))
+     
+     [(->map elements)]
+     (into {} (map (fn [[k v]]
+                     [(generate k recur-target)
+                      (generate v recur-target)])
+                   elements))
 
      [(->let* bindings bodies used-symbols)]
      ;; recur-target might be shadowed by any binding.

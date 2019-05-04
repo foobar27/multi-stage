@@ -9,7 +9,7 @@
 ;; - see: https://en.wikipedia.org/wiki/De_Bruijn_index
 
 
-(s/def ::environment vector?) ;; TOOD
+(s/def ::environment vector?) ;; TODO
 
 (s/def ::integer int)
 (s/def ::string string?)
@@ -18,6 +18,9 @@
 (defpatterns expression
   literal   [n any?]
   symbol    [name symbol?]
+  vector    [elements (s/coll-of ::expression)]
+  set       [elements (s/coll-of ::expression)]
+  map       [elements (s/coll-of (s/tuple ::expression ::expression))]
   variable  [level ::integer]
   class-reference [class-name symbol?]
   let       [e1 ::expression e2 ::expression original-name symbol?]
