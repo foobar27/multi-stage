@@ -248,34 +248,25 @@
                            (str "Constructor for " class-name " with arguments " (patterns->string args))))
 
       [(->apply function arguments)]
-      (let [function (evalms env function)
-            arguments (doall (map #(evalms env %) arguments))]
-        (match* [function]
+      (let [function (evalms env function)]
+        (or (match* [function]
+              [(->symbol f)]
+              (evalms env (->primitive-call f arguments))
 
-          ;; Disguised primitive call
-          [(->symbol f)]
-          (cond
-            (every? ast/constant? arguments)
-            (->constant (apply (resolve f) (map ::ast/value arguments)))
+              [(->closure arity body-env body original-function-name original-argument-names)]
+              (let [arguments (doall (map #(evalms env %) arguments))]
+                (if (= arity (count arguments))
+                  (evalms (into (conj (vec body-env)
+                                      (->closure arity body-env body original-function-name original-argument-names))
+                                arguments)
+                          body)
+                  (throw (IllegalArgumentException. (str "Arity mismatch, expected " arity " but got " (count arguments) " arguments for function " (pattern->string function) " arguments: " (patterns->string arguments))))))
 
-            (every? (some-fn ast/code? ast/constant?) arguments)
-            (reflectc (->primitive-call f (map remove-code-lift-constant arguments)))
-
-            true (throw (IllegalArgumentException. (str "Unhandled case for disguised primitive call to " f
-                                                        " with args " (patterns->string arguments)))))
-          
-          [(->closure arity body-env body original-function-name original-argument-names)]
-          (if (= arity (count arguments))
-            (evalms (into (conj (vec body-env)
-                                (->closure arity body-env body original-function-name original-argument-names))
-                          arguments)
-                    body)
-            (throw (IllegalArgumentException. (str "Arity mismatch, expected " arity " but got " (count arguments) " arguments for function " (pattern->string function) " arguments: " (patterns->string arguments)))))
-
-          [(->code body)]
-          (if (every? (some-fn code? ast/constant?) arguments)
-            (reflectc (->apply body (map #(::ast/expression (verify-code-or-lift-constant %)) arguments)))
-            (throw (IllegalArgumentException. (str "All non-constant arguments of lifted function application must be lifted, function: " (pattern->string function) " arguments: " (patterns->string arguments)))))))
+              [(->code body)]
+              (let [arguments (doall (map #(evalms env %) arguments))]
+                (if (every? (some-fn code? ast/constant?) arguments)
+                  (reflectc (->apply body (map #(::ast/expression (verify-code-or-lift-constant %)) arguments)))
+                  (throw (IllegalArgumentException. (str "All non-constant arguments of lifted function application must be lifted, function: " (pattern->string function) " arguments: " (patterns->string arguments)))))))))
       
       [(->if condition then else)]
       (match* [(evalms env condition)]
