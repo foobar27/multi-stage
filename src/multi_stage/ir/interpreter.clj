@@ -253,6 +253,12 @@
               [(->symbol f)]
               (evalms env (->primitive-call f arguments))
 
+              [(->constant x)]
+              (if (keyword? x)
+                ;; (:foo m optional-default) => (get m :foo optional-default)
+                (let [[m & argumnts] arguments]
+                  (evalmsg env (->primitive-call `get (into [m (->literal x)] arguments)))))
+
               [(->closure arity body-env body original-function-name original-argument-names)]
               (let [arguments (doall (map #(evalms env %) arguments))]
                 (if (= arity (count arguments))

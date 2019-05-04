@@ -77,11 +77,11 @@
    (fn [output data]
      (condp = (get format ::type)
        ;; TODO this could be a multi-method
-       ::primitive (condp = (get format ::primitive-type)
+       ::primitive (condp = (::primitive-type format)
                      ;; TODO this could be a multi-method
                      ::int8 (.writeByte output (int data)) ;; the int-cast is not a mistake, check the signature
                      ::int64 (.writeLong output (long data)))
-       ::record (doseq [{:keys [::attribute-name ::attribute-format]} (get format ::attributes)]
+       ::record (doseq [{:keys [::attribute-name ::attribute-format]} (::attributes format)]
                   ((write-formatted! attribute-format) output (get data attribute-name)))
        ::vector (let [{:keys [::index-format ::value-format]} format]
                   ((write-formatted! index-format) output (count data))
@@ -94,7 +94,7 @@
             (fn [output data]
               (condp = (get format ::type)
                 ;; TODO this could be a multi-method
-                ::primitive (condp = (get format ::primitive-type)
+                ::primitive (condp = (::primitive-type format)
                               ;; TODO this could be a multi-method
                               ::int8 (.writeByte output (int data)) ;; the int-cast is not a mistake, check the signature
                               ::int64 (.writeLong output (long data)))
