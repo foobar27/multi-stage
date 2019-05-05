@@ -16,13 +16,13 @@
        value
        `(quote ~value))
 
-     [(->vector elements)]
+     [(->vector elements used-symbols)]
      (vec (map #(generate % recur-target) elements))
 
-     [(->set elements)]
+     [(->set elements used-symbols)]
      (into #{} (map #(generate % recur-target) elements))
      
-     [(->map elements)]
+     [(->map elements used-symbols)]
      (into {} (map (fn [[k v]]
                      [(generate k recur-target)
                       (generate v recur-target)])
