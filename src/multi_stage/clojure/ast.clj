@@ -205,9 +205,14 @@
           ;; * bindings2 is not empty
           ;; Thus we only need to remove tail calls from bindings, not from bindings2
           [(->let* bindings2 bodies2 used-symbols)]
-          (build-let (concat (remove-tail-position-from-bindings bindings)
-                             bindings2)
-                     (simplify-bodies bodies2))
+          (let [bodies (simplify-bodies bodies2)
+                bindings (concat (remove-tail-position-from-bindings bindings)
+                                 bindings2)]
+            (if (and (= 1 (count bodies))
+                     (invoke? (first bodies)))
+              (smart-let* bindings bodies) ;; try to inline invoke target
+              (build-let bindings
+                         bodies)))
 
           ;; (let [... x 1] x)
           ;; We use recursion via smart-let*, so we don't need to worry
@@ -243,6 +248,33 @@
           [(->do bodies2 used-symbols)]
           (build-let (remove-tail-position-from-bindings bindings) bodies2)
 
+          [(->invoke (->variable fn-symbol used-symbols-variable) args tail-position? used-symbols-invoke)]
+          ;; Try to inline fn-symbol
+          (or (if (some #{fn-symbol} (map first bindings))
+                (let [[[_ function-definition]] (filter (fn [[k v]] (= k fn-symbol))
+                                                        bindings)
+                      following-bindings (drop 1
+                                               (drop-while (fn [[k v]]
+                                                             (not (= k fn-symbol)))
+                                                           bindings))
+                      following-bound-symbols (set (map first following-bindings))
+                      following-used-symbols (into #{} (mapcat (fn [[k v]]
+                                                                 (::used-symbols v))
+                                                               following-bindings))]
+                  ;; Verify no following symbol uses the same function.
+                  (if (not (.contains following-used-symbols fn-symbol))
+                    ;; Verify no symbol used by the function is shadowed afterwards.
+                    ;; This includes fn-symbol, so we know fn-symbol only appears once.
+                    (if (not (some following-bound-symbols (::used-symbols function-definition)))
+                      ;; Inline fn-symbol
+                      (smart-let* (remove (fn [[k v]]
+                                            (= k fn-symbol))
+                                          bindings)
+                        [(smart-invoke function-definition args)])))))
+              ;; Unable to inline fn-symbol, fall back to defaul case
+              (build-let (remove-tail-position-from-bindings  bindings)
+                         [body]))
+          
           ;; A single expression (neither let* nor do).
           ;; This will be the single body of the new let*.
           ;; TODO do we need recursion?
@@ -251,6 +283,11 @@
                      [expression])))
       ;; No bindings, consider as a do-block.
       body)))
+
+(drop 1
+      (drop-while (fn [[k v]]
+                    (not (= k 'f)))
+                  [['a 1] ['b 2] ['f 3] ['c 4]]))
 
 (s/fdef smart-if
   :args (s/alt :condition-then      (s/cat :condition ::expression
