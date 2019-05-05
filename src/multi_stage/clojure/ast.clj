@@ -14,12 +14,12 @@
 (defpatterns expression
   literal  [value any?
             used-symbols (s/coll-of symbol? :kind sequential?)]
-  vector   [elements (s/coll-of any?)
-            used-symbols (s/coll-of symbol? :kind sequential?)]
-  set      [elements (s/coll-of any?)
-            used-symbols (s/coll-of symbol? :kind sequential?)]
-  map      [elements (s/coll-of any?)
-            used-symbols (s/coll-of symbol? :kind sequential?)]
+  literal-vector [elements (s/coll-of any?)
+                  used-symbols (s/coll-of symbol? :kind sequential?)]
+  literal-set    [elements (s/coll-of any?)
+                  used-symbols (s/coll-of symbol? :kind sequential?)]
+  literal-map    [elements (s/coll-of any?)
+                  used-symbols (s/coll-of symbol? :kind sequential?)]
   variable [symbol symbol?
             used-symbols (s/coll-of symbol? :kind sequential?)]
   let*     [bindings (s/coll-of ::let-binding)
@@ -107,19 +107,19 @@
   :args (s/cat :element (s/coll-of any?))
   :ret ::expression)
 (defn smart-vector [elements]
-  (->vector elements []))
+  (->literal-vector elements []))
 
 (s/fdef smart-set
   :args (s/cat :element (s/coll-of any?))
   :ret ::expression)
 (defn smart-set [elements]
-  (->set elements []))
+  (->literal-set elements []))
 
 (s/fdef smart-map
   :args (s/cat :element (s/coll-of any?))
   :ret ::expression)
 (defn smart-map [elements]
-  (->map (map vec elements) []))
+  (->literal-map (map vec elements) []))
 
 (s/fdef smart-do
   :args (s/cat :bodies (s/coll-of ::expression))

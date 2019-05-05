@@ -1,7 +1,7 @@
 (ns multi-stage.clojure.generator
   (:require [multi-stage.clojure.ast :refer [->do ->let* ->fn* ->literal ->variable
                                              ->if ->invoke ->dot ->throw ->new ->class-reference
-                                             ->vector ->set ->map]
+                                             ->literal-vector ->literal-set ->literal-map]
              :as ast]
             [meliae.patterns :refer [match*]]))
 
@@ -16,13 +16,13 @@
        value
        `(quote ~value))
 
-     [(->vector elements used-symbols)]
+     [(->literal-vector elements used-symbols)]
      (vec (map #(generate % recur-target) elements))
 
-     [(->set elements used-symbols)]
+     [(->literal-set elements used-symbols)]
      (into #{} (map #(generate % recur-target) elements))
      
-     [(->map elements used-symbols)]
+     [(->literal-map elements used-symbols)]
      (into {} (map (fn [[k v]]
                      [(generate k recur-target)
                       (generate v recur-target)])

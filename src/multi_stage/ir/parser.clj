@@ -1,7 +1,7 @@
 (ns multi-stage.ir.parser
-  (:require [multi-stage.ir.ast :refer [->literal ->variable ->do ->let ->lambda ->apply ->dot ->new ->symbol
+  (:require [multi-stage.ir.ast :refer [->literal ->variable ->do ->let ->lambda ->apply ->dot ->new
                                         ->if ->lift ->run ->primitive-call ->quote ->throw ->class-reference
-                                        ->set ->vector ->map]
+                                        ->primitive-symbol ->literal-set ->literal-vector ->literal-map]
              :as ast]
             [clojure.walk :refer [macroexpand-all]]
             [meliae.patterns :refer [match*]]
@@ -44,15 +44,15 @@
     (->literal sexp)
 
     (vector? sexp)
-    (->vector (map #(sexp->ir % sym->index recur-target-variable) sexp))
+    (->literal-vector (map #(sexp->ir % sym->index recur-target-variable) sexp))
 
     (set? sexp)
-    (->set (map #(sexp->ir % sym->index recur-target-variable) sexp))
+    (->literal-set (map #(sexp->ir % sym->index recur-target-variable) sexp))
 
     (map? sexp)
-    (->map (for [[k v] sexp]
-             [(sexp->ir k sym->index recur-target-variable)
-              (sexp->ir v sym->index recur-target-variable)]))
+    (->literal-map (for [[k v] sexp]
+                     [(sexp->ir k sym->index recur-target-variable)
+                      (sexp->ir v sym->index recur-target-variable)]))
     
     (symbol? sexp)
     (or (get-var sym->index sexp)
@@ -60,7 +60,7 @@
           (->class-reference sexp))
         (let [s (resolve-symbol sexp)]
           (if (contains? primitive-fns s)
-            (->symbol s)))
+            (->primitive-symbol s)))
         (throw (IllegalArgumentException. (str "Unknown symbol: " sexp))))
 
     (seq? sexp)

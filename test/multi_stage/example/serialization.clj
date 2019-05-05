@@ -85,8 +85,9 @@
                   ((write-formatted! attribute-format) output (get data attribute-name)))
        ::vector (let [{:keys [::index-format ::value-format]} format]
                   ((write-formatted! index-format) output (count data))
-                  (lift-loop (doseq [item data]
-                               ((write-formatted! value-format) output item)))))))
+                  (lift-loop
+                   (doseq [item data]
+                     ((write-formatted! value-format) output item)))))))
  [example-format-vector])
 
 (specialize
@@ -94,21 +95,21 @@
    (fn [input]
      (condp = (get format ::type)
        ::primitive (condp = (::primitive-type format)
-                     ::int8 (lift (.readByte input))
-                     ::int64 (lift (.readLong input)))
+                     ::int8 (.readByte input)
+                     ::int64 (.readLong input))
        ::record (loop [attributes (::attributes format)
-                       data (transient {})]
+                       data (transient (lift {}))]
                   (if (seq attributes)
                     (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
                       (recur (rest attributes)
-                             (assoc! data attribute-name (read-formatted! attribute-format input))))
-                    (lift (persistent! data))))
+                             (assoc! data attribute-name ((read-formatted! attribute-format) input))))
+                    (persistent! data)))
        ::vector (let [{:keys [::index-format ::value-format]} format]
                   (lift-loop
-                   (loop [remaining-items (read-formatted! index-format input)
-                          data (transient [])]
+                   (loop [remaining-items ((read-formatted! index-format) input)
+                          data (transient (lift []))]
                      (if (pos? remaining-items)
                        (recur (dec remaining-items)
-                              (conj! data (read-formatted! value-format input)))
+                              (conj! data ((read-formatted! value-format) input)))
                        (persistent! data))))))))
  [example-format-vector])

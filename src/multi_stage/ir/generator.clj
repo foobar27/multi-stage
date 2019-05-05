@@ -1,7 +1,7 @@
 (ns multi-stage.ir.generator
   (:require [multi-stage.ir.ast :refer [->literal ->let ->do ->if ->primitive-call ->variable ->closure
                                         ->lambda ->dot ->new ->throw ->apply ->class-reference
-                                        ->vector ->set ->map]
+                                        ->literal-vector ->literal-set ->literal-map]
              :as ast]
             [multi-stage.clojure.ast :as clj]
             [meliae.patterns :refer [match*]]))
@@ -16,13 +16,13 @@
       [(->literal value)]
       (clj/smart-literal value)
 
-      [(->vector elements)]
+      [(->literal-vector elements)]
       (clj/smart-vector elements)
 
-      [(->set elements)]
+      [(->literal-set elements)]
       (clj/smart-set elements)
       
-      [(->map elements)]
+      [(->literal-map elements)]
       (clj/smart-map elements)
       
       [(->do bodies)]

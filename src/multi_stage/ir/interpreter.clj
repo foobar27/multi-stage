@@ -5,8 +5,8 @@
             [multi-stage.reflection :refer [invoke-constructor invoke-method]]
             [multi-stage.ir.ast :refer [;; expression constructors
                                         ->literal ->variable ->lambda ->apply ->primitive-call ->let ->if ->do
-                                        ->lift ->run ->quote ->throw ->new ->dot ->symbol
-                                        ->set ->vector ->map
+                                        ->lift ->run ->quote ->throw ->new ->dot ->primitive-symbol
+                                        ->literal-set ->literal-vector ->literal-map
                                         ;; value constructors
                                         ->constant ->closure ->code code?]
              :as ast]
@@ -179,33 +179,33 @@
       [(->literal n)]
       (->constant n)
 
-      [(->vector elements)]
+      [(->literal-vector elements)]
       (process-arguments env
                          elements
                          (fn evaluate-now [elements]
                            (vec elements))
                          (fn build-ast [elements]
-                           (->vector elements))
+                           (->literal-vector elements))
                          (fn to-string [elements]
                            (str "Literal vector with elements " (patterns->string elements))))
 
-      [(->set elements)]
+      [(->literal-set elements)]
       (process-arguments env
                          elements
                          (fn evaluate-now [elements]
                            (set elements))
                          (fn build-ast [elements]
-                           (->set elements))
+                           (->literal-set elements))
                          (fn to-string [elements]
                            (str "Literal set with elements " (patterns->string elements))))
 
-      [(->map elements)]
+      [(->literal-map elements)]
       (process-arguments env
                          elements
                          (fn evaluate-now [elements]
                            (into {} (map vec elements)))
                          (fn build-ast [elements]
-                           (->map elements))
+                           (->literal-map elements))
                          (fn to-string [elements]
                            (str "Literal map with elements " (patterns->string elements))))
 
@@ -215,8 +215,8 @@
       [(->variable n)]
       (nth env n)
 
-      [(->symbol x)]
-      (->symbol x)
+      [(->primitive-symbol x)]
+      (->primitive-symbol x)
       
       [(->lambda arity body original-function-name original-argument-names)]
       (->closure arity env body original-function-name original-argument-names)
@@ -283,7 +283,7 @@
       (let [function (evalms env function)
             number-of-arguments (count arguments)]
         (or (match* [function]
-              [(->symbol f)]
+              [(->primitive-symbol f)]
               (evalms env (->primitive-call f arguments))
 
               [(->constant x)]

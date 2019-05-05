@@ -17,10 +17,10 @@
 (defmultipattern expression)
 (defpatterns expression
   literal   [n any?]
-  symbol    [name symbol?]
-  vector    [elements (s/coll-of ::expression)]
-  set       [elements (s/coll-of ::expression)]
-  map       [elements (s/coll-of (s/tuple ::expression ::expression))]
+  primitive-symbol [name symbol?]
+  literal-vector   [elements (s/coll-of ::expression)]
+  literal-set      [elements (s/coll-of ::expression)]
+  literal-map      [elements (s/coll-of (s/tuple ::expression ::expression))]
   variable  [level ::integer]
   class-reference [class-name symbol?]
   let       [e1 ::expression e2 ::expression original-name symbol?]
