@@ -107,19 +107,19 @@
   :args (s/cat :element (s/coll-of any?))
   :ret ::expression)
 (defn smart-vector [elements]
-  (->literal-vector elements []))
+  (->literal-vector elements (merge-used-symbols-from elements)))
 
 (s/fdef smart-set
   :args (s/cat :element (s/coll-of any?))
   :ret ::expression)
 (defn smart-set [elements]
-  (->literal-set elements []))
+  (->literal-set elements (merge-used-symbols-from elements)))
 
 (s/fdef smart-map
   :args (s/cat :element (s/coll-of any?))
   :ret ::expression)
 (defn smart-map [elements]
-  (->literal-map (map vec elements) []))
+  (->literal-map (map vec elements) (merge-used-symbols-from elements)))
 
 (s/fdef smart-do
   :args (s/cat :bodies (s/coll-of ::expression))
