@@ -3,7 +3,7 @@
             [multi-stage.ir.ast :as ir-ast :refer :all]
             [multi-stage.ir.parser :as ir-parser :refer [parse]]
             [multi-stage.ir.core :refer [lift run]]
-            [multi-stage.test-utils :refer [verify-pattern remove-auto-gensym]]
+            [multi-stage.test-utils :refer [verify-pattern remove-gensym]]
             [meliae.patterns :refer [print-pattern]]
             [clojure.test :refer :all]
             [clojure.spec.test.alpha :as stest]))

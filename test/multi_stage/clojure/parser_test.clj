@@ -1,13 +1,13 @@
 (ns multi-stage.clojure.parser-test
   (:require [clojure.test :refer :all]
             [clojure.walk :refer [macroexpand-all]]
-            [multi-stage.test-utils :refer [remove-auto-gensym]]
+            [multi-stage.test-utils :refer [remove-gensym]]
             [multi-stage.clojure.parser :refer :all]))
 
 (deftest function-argument-parsing
   (are [expected input]
       (= expected
-         (destructure-clj `fn* (rest (remove-auto-gensym (macroexpand-all input)))))
+         (destructure-clj `fn* (rest (remove-gensym (macroexpand-all input)))))
 
     ;; fn, 0 args
     {:name nil

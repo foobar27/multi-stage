@@ -5,10 +5,17 @@
             [zprint.core :as zp]
             [clojure.pprint :refer :all]))
 
-(defn remove-auto-gensym [f]
+(defn- clear-gensym [sym]
+  (let [n (.replaceAll (name sym) "__.*" "")
+        n (if (re-matches #".*[0-9]{4,}" n)
+            (.replaceAll n "[0-9]*$" "")
+            n)]
+    (symbol n)))
+
+(defn remove-gensym [f]
   (postwalk (fn [f] (if (and (symbol? f)
                              (not (namespace f)))
-                      (symbol (.replaceAll (name f) "__.*" ""))
+                      (clear-gensym f)
                       f))
             f))
 
