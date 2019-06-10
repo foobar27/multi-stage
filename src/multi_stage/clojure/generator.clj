@@ -1,7 +1,8 @@
 (ns multi-stage.clojure.generator
   (:require [multi-stage.clojure.ast :refer [->do ->let* ->fn* ->literal ->variable
                                              ->if ->invoke ->dot ->throw ->new ->class-reference
-                                             ->literal-vector ->literal-set ->literal-map]
+                                             ->literal-vector ->literal-set ->literal-map
+                                             ->loop]
              :as ast]
             [meliae.patterns :refer [match*]]))
 
@@ -70,11 +71,19 @@
 
      [(->throw ee used-symbols)]
      `(throw ~(generate ee recur-target))
+
+     [(->loop bindings bodies used-symbols)]
+     `(loop [~@(mapcat (fn [[k v]]
+                         [k (generate v recur-target)])
+                       bindings)]
+        ~@(map #(generate % recur-target) bodies)) 
      
      [(->invoke f args tail-call? used-symbols)]
      (let [f (generate f recur-target)]
        (if (and tail-call?
-                (= f recur-target))
+                (or (= f recur-target)
+                    ;; TODO ugly hack I'm really not proud of
+                    (.startsWith (name f) "loop")))
          ;; TODO the string-to-symbol conversion is a workaround to an alegded clojure bug
          `(~(symbol "recur") ~@(doall (map #(generate % recur-target) args)))
          `(~f ~@(doall (map #(generate % recur-target) args)))))

@@ -103,4 +103,45 @@
     )
   )
 
+(deftest tail-call-elimination
+  (testing "no loop"
+    (is (= (smart-loop [['a (smart-literal 1)]
+                        ['b (smart-literal 2)]]
+                       [(smart-invoke (smart-variable `+)
+                                      [(smart-variable 'a)
+                                       (smart-variable 'b)])])
+           (smart-invoke (smart-fn* `the-loop
+                                    {:args ['a 'b]
+                                     :bodies [(smart-invoke (smart-variable `+)
+                                                            [(smart-variable 'a)
+                                                             (smart-variable 'b)])]})
+                         [(smart-literal 1)
+                          (smart-literal 2)]))))
+  (testing "simple loop-recur"
+    (is (= (smart-loop [['x (smart-literal 1)]
+                        ['y (smart-literal 2)]]
+                       [(->recur [(smart-invoke (smart-variable `inc)
+                                                [(smart-variable 'x)
+                                                 (smart-variable 'y)])])])
+           (smart-invoke (smart-fn* `the-loop
+                                    {:args ['a 'b]
+                                     :bodies [(smart-invoke (smart-variable `the-loop)
+                                                            [(smart-invoke (smart-variable `inc)
+                                                                           [(smart-variable 'x)])
+                                                             (smart-invoke (smart-variable `dec)
+                                                                           [(smart-variable 'y)])])]})
+                         [(smart-literal 1)
+                          (smart-literal 2)])))))
+
+(meliae.patterns/print-pattern
+ (smart-invoke (smart-fn* `the-loop
+                          {:args ['a 'b]
+                           :bodies [(smart-invoke (smart-variable `the-loop)
+                                                  [(smart-invoke (smart-variable `inc)
+                                                                 [(smart-variable 'x)])
+                                                   (smart-invoke (smart-variable `dec)
+                                                                 [(smart-variable 'y)])])]})
+               [(smart-literal 1)
+                (smart-literal 2)]))
+
 ;; TODO more tests

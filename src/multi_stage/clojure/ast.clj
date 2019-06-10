@@ -3,6 +3,7 @@
             [multi-stage.utils :refer [into!]]
             [meliae.patterns :refer [defmultipattern defpatterns match*]]))
 
+;; TODO why req-UN, why not qualify and have a proper smart constructor?
 (s/def ::signature
   (s/keys :req-un [::args ::bodies]))
 
@@ -46,7 +47,11 @@
   invoke   [function ::expression
             args (s/coll-of ::expression)
             tail-position? boolean?
-            used-symbols (s/coll-of symbol? :kind sequential?)])
+            used-symbols (s/coll-of symbol? :kind sequential?)]
+  recur    [args (s/coll-of ::expression)]
+  loop     [bindings (s/coll-of ::let-binding)
+            bodies (s/coll-of ::expression)
+            used-symbols (s/coll-of symbol :kind sequential?)])
 
 (defn- merge-used-symbols-from [& expressions]
   (into [] (mapcat ::used-symbols expressions)))
@@ -158,6 +163,8 @@
                        adjust-tail-positions)]
         (->do bodies
               (apply merge-used-symbols-from bodies))))))
+
+(declare smart-invoke)
 
 ;; TODO document guarantees
 (s/fdef smart-let*
@@ -284,10 +291,19 @@
       ;; No bindings, consider as a do-block.
       body)))
 
-(drop 1
-      (drop-while (fn [[k v]]
-                    (not (= k 'f)))
-                  [['a 1] ['b 2] ['f 3] ['c 4]]))
+(s/fdef smart-loop
+  :args (s/cat :bindings (s/coll-of (s/tuple symbol? ::expression))
+               :bodies (s/coll-of ::expression))
+  :ret ::expression)
+(defn smart-loop [bindings bodies]
+  ;; Simplify bodies, it's easier to reason about a single body.
+  (let [body (::bodies (smart-do bodies))
+        create-loop (fn [bindings bodies]
+                      (->loop bindings
+                              bodies
+                              ;; TODO shadowing between bindings and bodies
+                              (apply merge-used-symbols-from (concat (map second bindings) bodies))))]
+    (create-loop bindings bodies)))
 
 (s/fdef smart-if
   :args (s/alt :condition-then      (s/cat :condition ::expression
@@ -311,16 +327,35 @@
                          :lambda ::expression)
                :args (s/coll-of ::expression))
   :ret ::expression)
-(defn smart-invoke [f args]
+(defn smart-invoke [f arg-values]
   (let [f (smart-do [f])
-        args (doall (map #(remove-tail-position (smart-do [%])) args))]
-    (->invoke f
-              args
-              ;; By default it's a tail call
-              ;; Other smart constructors are responsible for setting this back to false
-              true
-              (into (apply merge-used-symbols-from args)
-                    (merge-used-symbols-from f)))))
+        arg-values (doall (map #(remove-tail-position (smart-do [%])) arg-values))]
+    ;; Check if we can introduce a loop
+    (or (match* [f]
+          [(->fn* fn-name signatures used-symbols)]
+          ;; Ensure there's only one arity (loop does not support more than one)
+          (if (= 1 (count signatures))
+            ;; Ensure arg-values do not use the function
+            (if (not (.contains arg-values fn-name))
+              (let [[{:keys [args bodies]}] signatures]
+                ;; Ensure arg-values shadows fn-name OR bodies only use fn-name in tail-calls
+                ;; TODO args shadows fn-name
+                ;; TODO or: bodies only use symbols in tail calls
+                (smart-loop (map (fn [arg-sym arg-value]
+                                   [arg-sym arg-value])
+                                 args
+                                 arg-values)
+                            bodies))))
+          ;; TODO check if only tail recursive
+          [e] nil) ;; it's a normal function call
+        ;; Else: Normal function call
+        (->invoke f
+                  arg-values
+                  ;; By default it's a tail call
+                  ;; Other smart constructors are responsible for setting this back to false
+                  true
+                  (into (apply merge-used-symbols-from arg-values)
+                        (merge-used-symbols-from f))))))
 
 (s/fdef smart-dot
   :args (s/cat :object ::expression
@@ -382,4 +417,3 @@
                   (mapcat (fn [{:keys [args bodies]}]
                             (remove (set args) (apply merge-used-symbols-from bodies)))
                           signatures)))))
-
