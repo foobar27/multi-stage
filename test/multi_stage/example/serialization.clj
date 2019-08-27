@@ -51,6 +51,26 @@
       (println "GENERATED" output)
       output)))
 
+(specialize
+ (let [matches-generic (fn matches-generic [maybe-lift]
+                         (fn rec [r]
+                           (fn [s]
+                             (if (seq r)
+                               (if (seq s)
+                                 (if (= (lift (first r))
+                                        (first s))
+                                   ((rec (rest r)) (rest s))
+                                   (maybe-lift false))
+                                 (maybe-lift false))
+                               (maybe-lift true)))))
+       matches-spec (matches-generic (fn [e] (lift e)))
+       matches-gen (matches-generic (fn [e] e))]
+   (fn [r]
+     (if (< (count r) 20)
+       (run 0 (lift (matches-spec r)))
+       (matches-gen r))))
+ ["ab"])
+
 (def example-format-primitive
   {::type ::primitive
    ::primitive-type ::int8})
