@@ -1,8 +1,13 @@
 (ns multi-stage.test-utils
   (:require [meliae.patterns :refer [print-pattern]]
+            [multi-stage.clojure.generator :as clj-gen]
+            [multi-stage.ir.parser :as ir-parser :refer [parse]]
+            [multi-stage.ir.generator :as ir-gen]
+            [multi-stage.ir.ast :as ir-ast :refer :all]
             [clojure.test :as t]
             [clojure.walk :refer [macroexpand-all postwalk]]
             [zprint.core :as zp]
+            [multi-stage.ir.interpreter :refer [evalmsg]]
             [clojure.pprint :refer :all]))
 
 (defn- clear-gensym [sym]
@@ -108,3 +113,12 @@
               (println)
               code#)
             ~expected)))
+
+(defmacro specialize [body static-arguments]
+  (let [parsed-body (ir-parser/clj->ir body)
+        ir (ir-ast/->run (ir-ast/->literal 0)
+                         (ir-ast/->lift (ir-ast/->apply parsed-body
+                                                        (vec (map #(ir-ast/->quote (eval %)) static-arguments)))))]
+    (let [output (clj-gen/generate (ir-gen/generate (evalmsg [] ir) nil))]
+      (println "GENERATED" output)
+      output)))
