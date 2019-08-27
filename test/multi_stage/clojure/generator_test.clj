@@ -4,6 +4,9 @@
             [multi-stage.clojure.generator :refer :all]))
 
 (deftest literal-collections-test
+  (testing "character"
+    (is (= \x
+           (generate (smart-literal \x)))))
   (testing "vector"
     (is (= [:a :b]
            (generate (smart-vector [(smart-literal :a)

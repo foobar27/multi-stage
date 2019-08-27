@@ -13,7 +13,7 @@
    (match* [e]
      
      [(->literal value used-symbols)]
-     (if ((some-fn number? string? keyword? boolean? symbol? nil?) value)
+     (if ((some-fn number? string? keyword? boolean? symbol? char? nil?) value)
        value
        `(quote ~value))
 
