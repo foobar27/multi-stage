@@ -43,10 +43,7 @@
    nil)))
 
 (defmacro specialize [body static-arguments]
-  (let [ir (ir-parser/clj->ir `(run 0 (lift (~body
-                                             ~@(for [arg static-arguments]
-                                                 (eval arg))))))
-        parsed-body (ir-parser/clj->ir body)
+  (let [parsed-body (ir-parser/clj->ir body)
         ir (ir-ast/->run (ir-ast/->literal 0)
                          (ir-ast/->lift (ir-ast/->apply parsed-body
                                                         (vec (map #(ir-ast/->quote (eval %)) static-arguments)))))]
