@@ -25,8 +25,10 @@
                                   sym))
 
 (def primitive-fns #{`get `seq `seq? `chunked-seq? `first `chunk-first `rest `chunk-rest `next `nth
-                     `assoc! `conj! `transient `persistent!
+                     `set `map `vec
+                     `assoc! `conj! `transient `persistent! `cons `concat `list
                      `+ `- `* `/ `inc `dec `pos?
+                     `number? `symbol?
                      `= `< `> `int `long `str `count
                      `unchecked-inc `unchecked-add `unchecked-add-int `unchecked-byte
                      `unchecked-char `unchecked-dec `unchecked-dec-int `unchecked-divide-int
