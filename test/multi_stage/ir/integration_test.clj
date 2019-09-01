@@ -8,7 +8,48 @@
 
 (stest/instrument (stest/enumerate-namespace ['meliae.patterns 'multi-stage.ir.ast 'multi-stage.clojure.ast]))
 
-;; TODO copy & paste
+(ms/defn starts-with-simple [pattern]
+  (fn [string]
+    (if (seq pattern)
+      (if (seq string)
+        (if (= (lift (first pattern))
+               (first string))
+          ((starts-with-simple (rest pattern)) (rest string))))
+      (lift true))))
+
+(ms/defn- starts-with-polymorphic [maybe-lift]
+  (fn rec [prefix]
+    (fn [string]
+      (if (seq prefix)
+        (if (seq string)
+          (if (= (lift (first prefix))
+                 (first string))
+            ((rec (rest prefix)) (rest string))
+            (maybe-lift false))
+          (maybe-lift false))
+        (maybe-lift true))))) 
+
+(ms/def ^:private starts-with-specialized
+  (starts-with-polymorphic (fn [e] (lift e))))
+
+(ms/def ^:private starts-with-generic
+  (starts-with-polymorphic (fn [e] e)))
+
+(ms/defn starts-with-optimized [prefix]
+  (if (< (count pattern) 20)
+    (run 0 (lift (starts-with-specialized pattern)))
+    (starts-with-generic pattern)))
+
+(ms/def starts-with-ab-simple
+  (partial-lift starts-with-simple "ab"))
+
+(ms/def starts-with-ab
+  (partial-lift starts-with-optimized "ab"))
+
+
+;;
+;; TODO remove
+;; 
 
 (def start-ab-simple
   (specialize
