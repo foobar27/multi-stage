@@ -4,7 +4,7 @@
   (:require [clojure.spec.alpha :as s]
             [multi-stage.reflection :refer [invoke-constructor invoke-method]]
             [multi-stage.ir.ast :refer [;; expression constructors
-                                        ->literal ->variable ->lambda ->apply ->primitive-call ->let ->if ->do
+                                        ->literal ->variable ->fn ->apply ->primitive-call ->let ->if ->do
                                         ->lift ->run ->throw ->new ->dot ->primitive-symbol
                                         ->literal-set ->literal-vector ->literal-map
                                         ;; value constructors
@@ -121,14 +121,14 @@
 
     ;;  Rep[A]=>Rep[B]  ==> Rep[A=>B]
     [(->closure arity body-env body original-function-name original-argument-names)]
-    (-> (->lambda arity
-                  (-> #(verify-code-or-lift-constant
-                        (evalms (into (vec body-env)
-                                      (repeatedly (inc arity) (fn [] (->code (fresh!)))))
-                                body))
-                      reifyc)
-                  original-function-name
-                  original-argument-names)
+    (-> (->fn arity
+              (-> #(verify-code-or-lift-constant
+                    (evalms (into (vec body-env)
+                                  (repeatedly (inc arity) (fn [] (->code (fresh!)))))
+                            body))
+                  reifyc)
+              original-function-name
+              original-argument-names)
         reflect) 
 
     [(->code e)]
@@ -215,7 +215,7 @@
       [(->primitive-symbol x)]
       (->primitive-symbol x)
       
-      [(->lambda arity body original-function-name original-argument-names)]
+      [(->fn arity body original-function-name original-argument-names)]
       (->closure arity env body original-function-name original-argument-names)
 
       [(->let e1 e2 original-name)]

@@ -41,7 +41,7 @@
   let              [e1 ::expression
                     e2 ::expression
                     original-name symbol?]
-  lambda           [arity integer?
+  fn               [arity integer?
                     body ::expression
                     original-function-name symbol?
                     original-argument-names (s/coll-of symbol?)]

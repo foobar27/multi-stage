@@ -1,6 +1,6 @@
 (ns multi-stage.ir.generator
   (:require [multi-stage.ir.ast :refer [->literal ->let ->do ->if ->primitive-call ->variable ->closure
-                                        ->lambda ->dot ->new ->throw ->apply ->class-reference
+                                        ->fn ->dot ->new ->throw ->apply ->class-reference
                                         ->literal-vector ->literal-set ->literal-map
                                         ->constant]
              :as ast]
@@ -48,7 +48,7 @@
                     (throw (IllegalArgumentException. (str "Could not get variable " level))))]
         (clj/smart-variable sym))
 
-      [(->lambda arity ee original-function-name original-argument-names)]
+      [(->fn arity ee original-function-name original-argument-names)]
       (let [f-sym (gensym original-function-name)
             arg-syms (map gensym original-argument-names)]
         (clj/smart-fn* f-sym

@@ -1,5 +1,5 @@
 (ns multi-stage.ir.parser
-  (:require [multi-stage.ir.ast :refer [->literal ->variable ->do ->let ->lambda ->apply ->dot ->new
+  (:require [multi-stage.ir.ast :refer [->literal ->variable ->do ->let ->fn ->apply ->dot ->new
                                         ->if ->lift ->run ->primitive-call ->throw ->class-reference
                                         ->primitive-symbol ->literal-set ->literal-vector ->literal-map]
              :as ast]
@@ -139,10 +139,10 @@
           :else (->apply (recur-item function) arguments)))
       
       [(pre-ast/->fn source-context name args body)]
-      (->lambda (count args)
-                (pre->ir body (push-vars (push-var scope name) args))
-                (::common/original-symbol name)
-                (map ::common/original-symbol args))
+      (->fn (count args)
+            (pre->ir body (push-vars (push-var scope name) args))
+            (::common/original-symbol name)
+            (map ::common/original-symbol args))
 
       [(pre-ast/->if source-context condition then else)]
       (->if (recur-item condition)

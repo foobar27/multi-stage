@@ -79,68 +79,68 @@
 (deftest fn-test
   (testing "one argument"
     (verify-parse
-     (->lambda 1
-               (->apply (->primitive-symbol `+)
-                        [(->variable 1)
-                         (->variable 1)])
-               'f
-               '[x])
+     (->fn 1
+           (->apply (->primitive-symbol `+)
+                    [(->variable 1)
+                     (->variable 1)])
+           'f
+           '[x])
      (fn f [x]
        (+ x x))))
   (testing "two nested fns"
     (verify-parse
-     (->lambda 1
-               (->lambda 1
-                         (->apply (->primitive-symbol `+)
-                                  [(->variable 1)
-                                   (->variable 3)])
-                         'inner
-                         '[y])
-               'outer
-               '[x])
+     (->fn 1
+           (->fn 1
+                 (->apply (->primitive-symbol `+)
+                          [(->variable 1)
+                           (->variable 3)])
+                 'inner
+                 '[y])
+           'outer
+           '[x])
      (fn outer [x]
        (fn inner [y]
          (+ x y)))))
   (testing "two arguments"
     (verify-parse
-     (->lambda 2
-               (->apply (->primitive-symbol `+)
-                        [(->variable 1)
-                         (->variable 2)])
-               'f
-               '[x y])
+     (->fn 2
+           (->apply (->primitive-symbol `+)
+                    [(->variable 1)
+                     (->variable 2)])
+           'f
+           '[x y])
      (fn f [x y]
        (+ x y))))
   (testing "0 arguments"
     (verify-parse
-     (->lambda 0
-               (->literal 1)
-               'f
-               [])
+     (->fn 0
+           (->literal 1)
+           'f
+           [])
      (fn f []
        1))))
 
 (deftest apply-test
   (testing "1 argument"
     (verify-parse
-     (->apply (->lambda 1
-                        (->apply (->primitive-symbol `+)
-                                 [(->variable 1)
-                                  (->literal 1)])
-                        'f
-                        '[x])
+     (->apply (->fn 1
+                    (->apply (->primitive-symbol `+)
+                             [(->variable 1)
+                              (->literal 1)])
+                    'f
+                    '[x])
               [(->literal 5)])
      ((fn f [x]
         (+ x 1))
       5)))
   (testing "2 arguments"
     (verify-parse
-     (->apply (->lambda 2
-                        (->apply (->primitive-symbol `+)
-                                 [(->variable 1)
-                                  (->variable 2)])
-                        'f
-                        '[x y])
+     (->apply (->fn 2
+                    (->apply (->primitive-symbol `+)
+                             [(->variable 1)
+                              (->variable 2)])
+                    'f
+                    '[x y])
               [(->literal 2)
                (->literal 3)])
      ((fn f [x y]
@@ -148,11 +148,11 @@
       2 3)))
   (testing "recursive apply fn"
     (verify-parse
-     (->apply (->lambda 1
-                        (->apply (->variable 0)
-                                 [(->variable 1)])
-                        'f
-                        '[x])
+     (->apply (->fn 1
+                    (->apply (->variable 0)
+                             [(->variable 1)])
+                    'f
+                    '[x])
               [(->literal 5)])
      ((fn f [x]
         (f x))
