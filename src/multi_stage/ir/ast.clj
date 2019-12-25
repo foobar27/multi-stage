@@ -44,7 +44,7 @@
   fn               [arity integer?
                     body ::expression
                     original-function-symbol symbol?
-                    original-argument-names (s/coll-of symbol?)]
+                    original-argument-symbols (s/coll-of symbol?)]
   apply            [e1 ::expression
                     arguments (s/coll-of ::expression)]
   dot              [object ::expression
@@ -72,5 +72,5 @@
              env ::environment
              body ::expression
              original-function-symbol symbol?
-             original-argument-names (s/coll-of symbol?)]
+             original-argument-symbols (s/coll-of symbol?)]
   code      [expression ::expression])

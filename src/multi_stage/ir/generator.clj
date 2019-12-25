@@ -48,9 +48,9 @@
                     (throw (IllegalArgumentException. (str "Could not get variable " level))))]
         (clj/smart-variable sym))
 
-      [(->fn arity ee original-function-symbol original-argument-names)]
+      [(->fn arity ee original-function-symbol original-argument-symbols)]
       (let [f-sym (gensym original-function-symbol)
-            arg-syms (map gensym original-argument-names)]
+            arg-syms (map gensym original-argument-symbols)]
         (clj/smart-fn* f-sym
                        {:args (vec arg-syms)
                         :bodies [(generate ee (into (conj index->sym f-sym) arg-syms))]}))
@@ -73,11 +73,11 @@
       [(->new class-name arguments)]
       (clj/smart-new class-name (vec (map #(generate % index->sym) arguments)))
       
-      [(->closure arity env ee original-function-symbol original-argument-names)]
+      [(->closure arity env ee original-function-symbol original-argument-symbols)]
       (if (seq env)
         (throw (IllegalArgumentException. "I have no idea how to translate a closure which is not at root level"))
         (let [f-sym (gensym original-function-symbol)
-              arg-syms (map gensym original-argument-names)]
+              arg-syms (map gensym original-argument-symbols)]
           (clj/smart-fn* f-sym
                          {:args (vec arg-syms)
                           :bodies [(generate ee (into (conj index->sym f-sym) arg-syms))]}))))))

@@ -120,7 +120,7 @@
     ;; (reflect (->cons uu vv))
 
     ;;  Rep[A]=>Rep[B]  ==> Rep[A=>B]
-    [(->closure arity body-env body original-function-symbol original-argument-names)]
+    [(->closure arity body-env body original-function-symbol original-argument-symbols)]
     (-> (->fn arity
               (-> #(verify-code-or-lift-constant
                     (evalms (into (vec body-env)
@@ -128,7 +128,7 @@
                             body))
                   reifyc)
               original-function-symbol
-              original-argument-names)
+              original-argument-symbols)
         reflect) 
 
     [(->code e)]
@@ -215,8 +215,8 @@
       [(->primitive-symbol x)]
       (->primitive-symbol x)
       
-      [(->fn arity body original-function-symbol original-argument-names)]
-      (->closure arity env body original-function-symbol original-argument-names)
+      [(->fn arity body original-function-symbol original-argument-symbols)]
+      (->closure arity env body original-function-symbol original-argument-symbols)
 
       [(->let e1 e2 original-symbol)]
       (let [v1 (evalms env e1)]
@@ -306,11 +306,11 @@
                   (throw (ArityException. number-of-arguments
                                           (str "Invalid number of arguments for vector invocation: " number-of-arguments)))))
               
-              [(->closure arity body-env body original-function-symbol original-argument-names)]
+              [(->closure arity body-env body original-function-symbol original-argument-symbols)]
               (let [arguments (doall (map #(evalms env %) arguments))]
                 (if (= arity (count arguments))
                   (evalms (into (conj (vec body-env)
-                                      (->closure arity body-env body original-function-symbol original-argument-names))
+                                      (->closure arity body-env body original-function-symbol original-argument-symbols))
                                 arguments)
                           body)
                   (throw (IllegalArgumentException. (str "Arity mismatch, expected " arity " but got " (count arguments) " arguments for function " (pattern->string function) " arguments: " (patterns->string arguments))))))
