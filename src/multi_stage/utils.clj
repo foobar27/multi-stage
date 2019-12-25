@@ -19,7 +19,7 @@
           (str (.-sym v))))
 
 (defn resolve-symbol [s]
-  (some-> s resolve var->sym))
+  (some-> s resolve))
 
 (defmacro check-not-nil [x & args]
   `(or ~x (throw (IllegalArgumentException. (str ~@args)))))
@@ -31,3 +31,7 @@
       (recur (rest from)
              (conj! to (first from)))
       to)))
+
+(defn unqualified-symbol? [s]
+  (and (symbol? s)
+       (not (qualified-symbol? s))))

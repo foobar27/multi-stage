@@ -5,7 +5,7 @@
             [multi-stage.reflection :refer [invoke-constructor invoke-method]]
             [multi-stage.ir.ast :refer [;; expression constructors
                                         ->literal ->variable ->lambda ->apply ->primitive-call ->let ->if ->do
-                                        ->lift ->run ->quote ->throw ->new ->dot ->primitive-symbol
+                                        ->lift ->run ->throw ->new ->dot ->primitive-symbol
                                         ->literal-set ->literal-vector ->literal-map
                                         ;; value constructors
                                         ->constant ->closure ->code code?]
@@ -209,9 +209,6 @@
                          (fn to-string [elements]
                            (str "Literal map with elements " (patterns->string elements))))
 
-      [(->quote form)]
-      (->constant form)
-      
       [(->variable n)]
       (nth env n)
 

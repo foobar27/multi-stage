@@ -1,13 +1,14 @@
 (ns multi-stage.test-utils
   (:require [meliae.patterns :refer [print-pattern]]
             [multi-stage.clojure.generator :as clj-gen]
-            [multi-stage.ir.parser :as ir-parser :refer [parse]]
-            [multi-stage.ir.generator :as ir-gen]
-            [multi-stage.ir.ast :as ir-ast :refer :all]
+            [multi-stage.pre.parser :refer [generate-variable!]]
+            ;; [multi-stage.ir.parser :as ir-parser :refer [parse]]
+            ;; [multi-stage.ir.generator :as ir-gen]
+            ;; [multi-stage.ir.ast :as ir-ast :refer :all]
             [clojure.test :as t]
             [clojure.walk :refer [macroexpand-all postwalk]]
             [zprint.core :as zp]
-            [multi-stage.ir.interpreter :refer [evalmsg]]
+            ;; [multi-stage.ir.interpreter :refer [evalmsg]]
             [clojure.pprint :refer :all]))
 
 (defn- clear-gensym [sym]
@@ -107,18 +108,25 @@
       (intern *ns* symbol var)))) 
 
 (defmacro verify-pattern [actual expected]
-  `(t/is (= (let [code# ~actual]
+  `(t/is (= ~expected
+            (let [code# ~actual]
               (print "verify: ")
               (print-pattern code#)
               (println)
-              code#)
-            ~expected)))
+              code#))))
 
-(defmacro specialize [body static-arguments]
-  (let [parsed-body (ir-parser/clj->ir body)
-        ir (ir-ast/->run (ir-ast/->literal 0)
-                         (ir-ast/->lift (ir-ast/->apply parsed-body
-                                                        (vec (map #(ir-ast/->quote (eval %)) static-arguments)))))]
-    (let [output (clj-gen/generate (ir-gen/generate (evalmsg [] ir) nil))]
-      (println "GENERATED" output)
-      output)))
+(defmacro with-generated-vars [bindings & bodies]
+  `(let [~@(mapcat (fn [[k v source-context]]
+                     `[~k (generate-variable! '~v ~source-context)])
+                   (partition 3 bindings))]
+     ~@bodies))
+
+(comment
+  (defmacro specialize [body static-arguments]
+    (let [parsed-body (ir-parser/clj->ir body)
+          ir (ir-ast/->run (ir-ast/->literal 0)
+                           (ir-ast/->lift (ir-ast/->apply parsed-body
+                                                          (vec (map #(ir-ast/->literal (eval %)) static-arguments)))))]
+      (let [output (clj-gen/generate (ir-gen/generate (evalmsg [] ir) nil))]
+        (println "GENERATED" output)
+        output))))
