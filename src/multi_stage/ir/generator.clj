@@ -29,8 +29,8 @@
       [(->do bodies)]
       (clj/smart-do (doall (map #(generate % index->sym) bodies)))
       
-      [(->let binding body original-name)]
-      (let [sym (gensym original-name)]
+      [(->let binding body original-symbol)]
+      (let [sym (gensym original-symbol)]
         (clj/smart-let* [[sym (generate binding index->sym)]]
           [(generate body (conj index->sym sym))]))
 

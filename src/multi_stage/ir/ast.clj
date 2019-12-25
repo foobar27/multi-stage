@@ -40,7 +40,7 @@
   class-reference  [class-name symbol?]
   let              [e1 ::expression
                     e2 ::expression
-                    original-name symbol?]
+                    original-symbol symbol?]
   fn               [arity integer?
                     body ::expression
                     original-function-name symbol?

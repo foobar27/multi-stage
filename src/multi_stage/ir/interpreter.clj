@@ -218,7 +218,7 @@
       [(->fn arity body original-function-name original-argument-names)]
       (->closure arity env body original-function-name original-argument-names)
 
-      [(->let e1 e2 original-name)]
+      [(->let e1 e2 original-symbol)]
       (let [v1 (evalms env e1)]
         (evalms (conj (vec env) v1)
                 e2))
