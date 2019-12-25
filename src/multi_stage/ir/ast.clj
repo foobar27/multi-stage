@@ -38,14 +38,14 @@
   literal-map      [elements (s/coll-of (s/tuple ::expression ::expression))]
   variable         [level ::integer]
   class-reference  [class-name symbol?]
-  let              [e1 ::expression
-                    e2 ::expression
+  let              [key-expression ::expression
+                    value-expression ::expression
                     original-symbol symbol?]
   fn               [arity integer?
                     body ::expression
                     original-function-symbol symbol?
                     original-argument-symbols (s/coll-of symbol?)]
-  apply            [e1 ::expression
+  apply            [function-expression ::expression
                     arguments (s/coll-of ::expression)]
   dot              [object ::expression
                     method-name symbol?
@@ -54,12 +54,12 @@
                     arguments (s/coll-of ::expression)]
   throw            [exception ::expression]
   do               [args (s/coll-of ::expression)]
-  if               [c ::expression
-                    a ::expression
-                    b ::expression]
-  lift             [e ::expression]
-  run              [b ::expression
-                    e ::expression]
+  if               [condition ::expression
+                    true-branch ::expression
+                    false-branch ::expression]
+  lift             [expression ::expression]
+  run              [body ::expression
+                    stage ::expression]
   primitive-call   [sym qualified-symbol?
                     args (s/coll-of ::expression)])
 
