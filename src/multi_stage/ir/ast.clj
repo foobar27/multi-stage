@@ -43,7 +43,7 @@
                     original-symbol symbol?]
   fn               [arity integer?
                     body ::expression
-                    original-function-name symbol?
+                    original-function-symbol symbol?
                     original-argument-names (s/coll-of symbol?)]
   apply            [e1 ::expression
                     arguments (s/coll-of ::expression)]
@@ -71,6 +71,6 @@
   closure   [arity integer?
              env ::environment
              body ::expression
-             original-function-name symbol?
+             original-function-symbol symbol?
              original-argument-names (s/coll-of symbol?)]
   code      [expression ::expression])
