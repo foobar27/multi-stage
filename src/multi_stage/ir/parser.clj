@@ -150,7 +150,9 @@
             (recur-item else))
 
       [(pre-ast/->dot source-context object method-name arguments)]
-      (->dot object method-name (recur-items arguments))
+      (->dot (recur-item object)
+             method-name
+             (recur-items arguments))
 
       [(pre-ast/->new source-context class-name arguments)]
       (->new class-name (recur-items arguments))

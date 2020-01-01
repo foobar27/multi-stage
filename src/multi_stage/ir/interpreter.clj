@@ -285,7 +285,7 @@
                 (or (keyword? x) (symbol? x))
                 ;; (:foo m optional-default) => (get m :foo optional-default)
                 (let [[m & arguments] arguments]
-                  (eval-primitive-call (->primitive-symbol `get)
+                  (eval-primitive-call `get
                                        (into [m (->literal x)] arguments)))
 
                 (set? x)
