@@ -1,5 +1,6 @@
 (ns multi-stage.ir.core
-  (:require [multi-stage.common.core :refer [mockable-gensym]]))
+  (:require [multi-stage.common.core :refer [mockable-gensym]]
+            [clojure.walk :refer [macroexpand-all]]))
 
 (defn lift [arg]
   (throw (IllegalStateException. "Must be in parsed block.")))
@@ -29,8 +30,11 @@
                 ~@bodies))
         ~@argument-symbols))))
 
-(defmacro lift-loop [bindings & bodies]
-  (let [expanded (macroexpand-1 `(loop ~bindings ~@bodies))
+(defmacro lift-loop [loop-expression]
+  (let [[loop-symbol bindings & bodies] (macroexpand-all loop-expression)
+        _ (when-not (= loop-symbol 'loop*)
+            (throw (IllegalArgumentException. "Can only lift loops!")))
+        expanded (macroexpand-1 `(loop [~@bindings] ~@bodies))
         throw-unrecognized (fn []
                              (throw (IllegalArgumentException.
                                      (str "Did not recognize expanded loop: " expanded))))]
