@@ -1,14 +1,14 @@
 (ns multi-stage.test-utils
   (:require [meliae.patterns :refer [print-pattern]]
             [multi-stage.clojure.generator :as clj-gen]
-            [multi-stage.pre.parser :refer [generate-variable!]]
-            ;; [multi-stage.ir.parser :as ir-parser :refer [parse]]
-            ;; [multi-stage.ir.generator :as ir-gen]
-            ;; [multi-stage.ir.ast :as ir-ast :refer :all]
+            [multi-stage.pre.parser :refer [generate-variable!] :as pre-parser]
+            [multi-stage.ir.parser :as ir-parser]
+            [multi-stage.ir.generator :as ir-gen]
+            [multi-stage.ir.ast :as ir-ast :refer :all]
             [clojure.test :as t]
             [clojure.walk :refer [macroexpand-all postwalk]]
             [zprint.core :as zp]
-            ;; [multi-stage.ir.interpreter :refer [evalmsg]]
+            [multi-stage.ir.interpreter :refer [evalmsg]]
             [clojure.pprint :refer :all]))
 
 (defn- clear-gensym [sym]
@@ -121,12 +121,11 @@
                    (partition 3 bindings))]
      ~@bodies))
 
-(comment
-  (defmacro specialize [body static-arguments]
-    (let [parsed-body (ir-parser/clj->ir body)
-          ir (ir-ast/->run (ir-ast/->literal 0)
-                           (ir-ast/->lift (ir-ast/->apply parsed-body
-                                                          (vec (map #(ir-ast/->literal (eval %)) static-arguments)))))]
-      (let [output (clj-gen/generate (ir-gen/generate (evalmsg [] ir) nil))]
-        (println "GENERATED" output)
-        output))))
+(defmacro specialize [body static-arguments]
+  (let [parsed-body (ir-parser/pre->ir (pre-parser/clj->pre body {}) {})
+        ir (ir-ast/->run (ir-ast/->literal 0)
+                         (ir-ast/->lift (ir-ast/->apply parsed-body
+                                                        (vec (map #(ir-ast/->literal (eval %)) static-arguments)))))]
+    (let [output (clj-gen/generate (ir-gen/generate (evalmsg [] ir) nil))]
+      (println "GENERATED" output)
+      output)))

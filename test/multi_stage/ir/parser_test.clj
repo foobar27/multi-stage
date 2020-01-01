@@ -1,4 +1,4 @@
-(ns multi-stage.ir.parser_test
+(ns multi-stage.ir.parser-test
   (:require [multi-stage.common.core :refer [mock-gensyms]]
 
             [multi-stage.pre.parser :refer [clj->pre generate-variable!]]
