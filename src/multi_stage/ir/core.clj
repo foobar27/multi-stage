@@ -26,7 +26,7 @@
                        [sym value])
                      argument-symbols
                      binding-values)]
-       ((lift (fn [~@binding-keys]
+       ((lift (fn loop# [~@binding-keys]
                 ~@bodies))
         ~@argument-symbols))))
 
