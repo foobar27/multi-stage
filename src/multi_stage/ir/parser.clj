@@ -7,7 +7,6 @@
             [clojure.walk :refer [macroexpand-all]]
             [meliae.patterns :refer [match*]]
             [multi-stage.pre.ast :as pre-ast]
-            [multi-stage.clojure.parser :refer [destructure-clj]]
             [multi-stage.ir.core :refer [lift run]]
             [multi-stage.common.core :as common]))
 
