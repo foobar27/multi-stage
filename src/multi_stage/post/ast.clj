@@ -1,4 +1,4 @@
-(ns multi-stage.clojure.ast
+(ns multi-stage.post.ast
   (:require [clojure.spec.alpha :as s]
             [multi-stage.utils :refer [into!]]
             [meliae.patterns :refer [defmultipattern defpatterns match*]]))

@@ -1,6 +1,6 @@
 (ns multi-stage.test-utils
   (:require [meliae.patterns :refer [print-pattern]]
-            [multi-stage.clojure.generator :as clj-gen]
+            [multi-stage.post.generator :as clj-gen]
             [multi-stage.pre.parser :refer [generate-variable!] :as pre-parser]
             [multi-stage.ir.parser :as ir-parser]
             [multi-stage.ir.generator :as ir-gen]

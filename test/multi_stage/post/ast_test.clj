@@ -1,9 +1,11 @@
-(ns multi-stage.clojure.ast-test
+(ns multi-stage.post.ast-test
   (:require [clojure.test :refer :all]
             [clojure.spec.test.alpha :as stest]
-            [multi-stage.clojure.ast :refer :all]))
+            [multi-stage.post.ast :refer :all]))
 
-(stest/instrument (stest/enumerate-namespace 'multi-stage.clojure.ast))
+(stest/instrument
+ (stest/enumerate-namespace
+  '[multi-stage.post.ast]))
 
 (deftest test-dfs-order
   (testing "(+ x (a b) y)"

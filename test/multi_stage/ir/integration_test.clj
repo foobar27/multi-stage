@@ -1,6 +1,7 @@
 (ns multi-stage.ir.integration-test
   (:require [multi-stage.ir.core :refer [lift run]]
             [multi-stage.test-utils :refer [verify-pattern remove-gensym]]
+            [multi-stage.post.ast]
             [meliae.patterns :refer [print-pattern]]
             [clojure.test :refer :all]
             [clojure.spec.test.alpha :as stest]
@@ -11,7 +12,7 @@
   ['meliae.patterns
    'multi-stage.ir.ast
    'multi-stage.ir.value
-   'multi-stage.clojure.ast]))
+   'multi-stage.post.ast]))
 
 (comment
   (ms/defn starts-with-simple [pattern]

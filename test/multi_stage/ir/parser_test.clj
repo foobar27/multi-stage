@@ -7,8 +7,6 @@
             [multi-stage.ir.ast :as ir-ast :refer :all]
             [multi-stage.ir.parser :as ir-parser :refer [pre->ir]]
             
-            ;;[multi-stage.clojure.generator :as clj-gen]
-
             [multi-stage.test-utils :refer [verify-pattern remove-gensym with-generated-vars]]
             [meliae.patterns :refer [print-pattern]]
             [clojure.test :refer :all]

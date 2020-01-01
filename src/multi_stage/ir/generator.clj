@@ -4,7 +4,7 @@
                                         ->literal-vector ->literal-set ->literal-map]
              :as ast]
             [multi-stage.ir.value :refer [->closure ->constant]]
-            [multi-stage.clojure.ast :as clj]
+            [multi-stage.post.ast :as clj]
             [meliae.patterns :refer [match*]]))
 
 (defn generate [e index->sym]

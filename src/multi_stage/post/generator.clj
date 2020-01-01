@@ -1,8 +1,8 @@
-(ns multi-stage.clojure.generator
-  (:require [multi-stage.clojure.ast :refer [->do ->let* ->fn* ->literal ->variable
-                                             ->if ->invoke ->dot ->throw ->new ->class-reference
-                                             ->literal-vector ->literal-set ->literal-map
-                                             ->loop]
+(ns multi-stage.post.generator
+  (:require [multi-stage.post.ast :refer [->do ->let* ->fn* ->literal ->variable
+                                          ->if ->invoke ->dot ->throw ->new ->class-reference
+                                          ->literal-vector ->literal-set ->literal-map
+                                          ->loop]
              :as ast]
             [meliae.patterns :refer [match*]]))
 

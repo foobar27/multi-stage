@@ -1,5 +1,5 @@
 (ns multi-stage.example.serialization
-  (:require [multi-stage.clojure.generator :as clj-gen]
+  (:require [multi-stage.post.generator :as clj-gen]
             [multi-stage.ir.ast :as ir-ast]
             [multi-stage.ir.parser :as ir-parser]
             [multi-stage.ir.core :refer [lift lift-loop run]]
@@ -7,14 +7,14 @@
             [multi-stage.ir.generator :as ir-gen]
             [meliae.patterns :refer [print-pattern]]
             [clojure.spec.test.alpha :as stest]
-            ;;[multi-stage.test-utils :refer [specialize]]
+            [multi-stage.test-utils :refer [specialize]]
             ))
 
 (stest/instrument
  (stest/enumerate-namespace ['meliae.patterns
                              'multi-stage.ir.ast
                              'multi-stage.ir.value
-                             'multi-stage.clojure.ast
+                             'multi-stage.post.ast
                              ]))
 
  ;; TODO additional features:
@@ -39,67 +39,66 @@
                    ::attribute-format {::type ::primitive
                                        ::primitive-type ::int8}}]})
 
- (def example-format-vector
-   {::type ::vector
-    ::index-format example-format-primitive
-    ::value-format example-format-record})
+(def example-format-vector
+  {::type ::vector
+   ::index-format example-format-primitive
+   ::value-format example-format-record})
 
- (comment
-   (specialize
-    (fn write-formatted! [format]
-      (fn [output data]
-        (condp = (get format ::type)
-          ;; TODO this could be a multi-method
-          ::primitive (condp = (::primitive-type format)
-                        ;; TODO this could be a multi-method
-                        ::int8 (.writeByte output (int data)) ;; the int-cast is not a mistake, check the signature
-                        ::int64 (.writeLong output (long data)))
-          ::record (doseq [{:keys [::attribute-name ::attribute-format]} (::attributes format)]
-                     ((write-formatted! attribute-format) output (get data attribute-name)))
-          ::vector (let [{:keys [::index-format ::value-format]} format]
-                     ((write-formatted! index-format) output (count data))
-                     (lift-loop
-                      (doseq [item data]
-                        ((write-formatted! value-format) output item)))))))
-    [example-format-vector])
+(specialize
+ (fn write-formatted! [format]
+   (fn [output data]
+     (condp = (get format ::type)
+       ;; TODO this could be a multi-method
+       ::primitive (condp = (::primitive-type format)
+                     ;; TODO this could be a multi-method
+                     ::int8 (.writeByte output (int data)) ;; the int-cast is not a mistake, check the signature
+                     ::int64 (.writeLong output (long data)))
+       ::record (doseq [{:keys [::attribute-name ::attribute-format]} (::attributes format)]
+                  ((write-formatted! attribute-format) output (get data attribute-name)))
+       ::vector (let [{:keys [::index-format ::value-format]} format]
+                  ((write-formatted! index-format) output (count data))
+                  (lift-loop
+                   (doseq [item data]
+                     ((write-formatted! value-format) output item)))))))
+ [example-format-vector])
 
-   (specialize
-    (fn read-formatted! [format]
-      (fn [input]
-        (condp = (get format ::type)
-          ::primitive (condp = (::primitive-type format)
-                        ::int8 (.readByte input)
-                        ::int64 (.readLong input))
-          ::record (loop [attributes (::attributes format)
-                          data (transient (lift {}))]
-                     (if (seq attributes)
-                       (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
-                         (recur (rest attributes)
-                                (assoc! data attribute-name ((read-formatted! attribute-format) input))))
-                       (persistent! data)))
-          ::vector (let [{:keys [::index-format ::value-format]} format]
-                     (lift-loop
-                      (loop [remaining-items ((read-formatted! index-format) input)
-                             data (transient (lift []))]
-                        (if (pos? remaining-items)
-                          (recur (dec remaining-items)
-                                 (conj! data ((read-formatted! value-format) input)))
-                          (persistent! data))))))))
-    [example-format-vector]))
+(specialize
+ (fn read-formatted! [format]
+   (fn [input]
+     (condp = (get format ::type)
+       ::primitive (condp = (::primitive-type format)
+                     ::int8 (.readByte input)
+                     ::int64 (.readLong input))
+       ::record (loop [attributes (::attributes format)
+                       data (transient (lift {}))]
+                  (if (seq attributes)
+                    (let [{:keys [::attribute-name ::attribute-format]} (first attributes)]
+                      (recur (rest attributes)
+                             (assoc! data attribute-name ((read-formatted! attribute-format) input))))
+                    (persistent! data)))
+       ::vector (let [{:keys [::index-format ::value-format]} format]
+                  (lift-loop
+                   (loop [remaining-items ((read-formatted! index-format) input)
+                          data (transient (lift []))]
+                     (if (pos? remaining-items)
+                       (recur (dec remaining-items)
+                              (conj! data ((read-formatted! value-format) input)))
+                       (persistent! data))))))))
+ [example-format-vector])
 
- ;; TODO How do we know which file is not ascending?
- (defn ensure-ascending [get-key smaller? xs]
-   (let [previous-key (volatile! ::none)]
-     (lazy-seq
-      (if-let [xs (seq xs)]
-        (let [x (first xs)
-              key (get-key x)
-              xs (rest xs)]
-          (if (smaller? previous-key key)
-            (do
-              (vreset! previous-key key)
-              (cons key (ensure-ascending get-key smaller? xs)))
-            (throw (IllegalArgumentException. "Ascending keys!"))))))))
+;; TODO How do we know which file is not ascending?
+(defn ensure-ascending [get-key smaller? xs]
+  (let [previous-key (volatile! ::none)]
+    (lazy-seq
+     (if-let [xs (seq xs)]
+       (let [x (first xs)
+             key (get-key x)
+             xs (rest xs)]
+         (if (smaller? previous-key key)
+           (do
+             (vreset! previous-key key)
+             (cons key (ensure-ascending get-key smaller? xs)))
+           (throw (IllegalArgumentException. "Ascending keys!"))))))))
 
  (defn remove-expired [expired? input]
    (remove expired? input))
