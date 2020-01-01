@@ -3,13 +3,11 @@
   (:import [clojure.lang ArityException])
   (:require [clojure.spec.alpha :as s]
             [multi-stage.reflection :refer [invoke-constructor invoke-method]]
-            [multi-stage.ir.ast :refer [;; expression constructors
-                                        ->literal ->variable ->fn ->apply ->primitive-call ->let ->if ->do
+            [multi-stage.ir.ast :refer [->literal ->variable ->fn ->apply ->primitive-call ->let ->if ->do
                                         ->lift ->run ->throw ->new ->dot ->primitive-symbol
-                                        ->literal-set ->literal-vector ->literal-map
-                                        ;; value constructors
-                                        ->constant ->closure ->code code?]
+                                        ->literal-set ->literal-vector ->literal-map]
              :as ast]
+            [multi-stage.ir.value :refer [->constant ->closure ->code code?] :as value]
             [meliae.patterns :refer [match*]]))
 
 ;; TODO move to meliae
@@ -62,7 +60,7 @@
 (defn- verify-code-or-lift-constant [e]
   (cond
     (code? e) e
-    (ast/constant? e) (->code (->literal (::ast/value e)))
+    (value/constant? e) (->code (->literal (::value/value e)))
     true (throw (IllegalArgumentException. (str "Neither a code-, nor a constant-expression: " (pattern->string e))))))
 
 ;; TODO spec
@@ -107,7 +105,7 @@
 (declare evalms)
 
 (s/fdef lift
-  :args (s/cat :v ::ast/value)
+  :args (s/cat :v ::value/value)
   :ret ::ast/expression)
 (defn lift [v]
   (match* [v]
@@ -135,7 +133,7 @@
     (reflect (->lift e))))
 
 (s/fdef liftc
-  :args ::ast/value
+  :args ::value/value
   :ret ::ast/expression)
 (defn liftc [v]
   (-> v lift ->code))
@@ -148,30 +146,30 @@
 
 (defn- remove-code-lift-constant [arg]
   (cond
-    (ast/code? arg)     (::ast/expression arg)
-    (ast/constant? arg) (ast/->literal (::ast/value arg))))
+    (value/code? arg)     (::value/expression arg)
+    (value/constant? arg) (ast/->literal (::value/value arg))))
 
 (defn- process-arguments [env args evaluate-now build-ast to-string]
   (let [args (map #(evalms env %) args)]
     (cond
 
       ;; all constants -> evaluate and return constant
-      (every? ast/constant? args)
-      (->constant (evaluate-now (map ::ast/value args)))
+      (every? value/constant? args)
+      (->constant (evaluate-now (map ::value/value args)))
 
       ;; some code, some constant
       ;; -> get expression from code, wrap constant into code
       ;; -> reflect code block
-      (every? (some-fn ast/code? ast/constant?) args)
+      (every? (some-fn value/code? value/constant?) args)
       (reflectc (build-ast (map remove-code-lift-constant args)))
 
       ;; else
       true (throw (IllegalArgumentException. (str "Unhandled case:" (to-string args)))))))
 
 (s/fdef evalms
-  :args (s/cat :env ::ast/environment
+  :args (s/cat :env ::value/environment
                :e   ::ast/expression)
-  :ret ::ast/value)
+  :ret ::value/value)
 (defn evalms [env e]
   (do
     (comment (println "evalms " (pattern->string e)))
@@ -317,8 +315,8 @@
 
               [(->code body)]
               (let [arguments (doall (map #(evalms env %) arguments))]
-                (if (every? (some-fn code? ast/constant?) arguments)
-                  (reflectc (->apply body (map #(::ast/expression (verify-code-or-lift-constant %)) arguments)))
+                (if (every? (some-fn code? value/constant?) arguments)
+                  (reflectc (->apply body (map #(::value/expression (verify-code-or-lift-constant %)) arguments)))
                   (throw (IllegalArgumentException. (str "All non-constant arguments of lifted function application must be lifted, function: " (pattern->string function) " arguments: " (patterns->string arguments)))))))))
       
       [(->if condition then else)]
@@ -347,7 +345,7 @@
 
 
 (s/fdef evalmsg
-  :args (s/cat :env ::ast/environment
+  :args (s/cat :env ::value/environment
                :e ::ast/expression)
   :ret  ::ast/expression)
 (defn evalmsg [env e]

@@ -22,6 +22,7 @@
    'multi-stage.pre.parser
    'multi-stage.ir.ast
    'multi-stage.ir.parser
+   'multi-stage.ir.value
    ]))
 
 (defmacro parse [sexp]

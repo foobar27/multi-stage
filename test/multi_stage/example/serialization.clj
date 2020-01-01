@@ -10,8 +10,12 @@
             ;;[multi-stage.test-utils :refer [specialize]]
             ))
 
- (stest/instrument (stest/enumerate-namespace ['meliae.patterns 'multi-stage.ir.ast 'multi-stage.clojure.ast
-                                               ]))
+(stest/instrument
+ (stest/enumerate-namespace ['meliae.patterns
+                             'multi-stage.ir.ast
+                             'multi-stage.ir.value
+                             'multi-stage.clojure.ast
+                             ]))
 
  ;; TODO additional features:
  ;; TODO  - multimethods

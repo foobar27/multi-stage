@@ -2,11 +2,15 @@
   (:refer-clojure :exclude [reify])
   (:require [multi-stage.ir.interpreter :refer :all]
             [multi-stage.ir.ast :refer :all]
+            [multi-stage.ir.value :refer :all]
             [clojure.test :refer :all]
             [meliae.patterns :refer [print-pattern]]
             [clojure.spec.test.alpha :as stest]))
 
-(stest/instrument '[multi-stage.ir.interpreter multi-stage.ir.ast])
+(stest/instrument
+ '[multi-stage.ir.interpreter
+   multi-stage.ir.ast
+   multi-stage.ir.value])
 
 (defn debug [x]
   (print "debug: ")

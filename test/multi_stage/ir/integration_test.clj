@@ -6,7 +6,12 @@
             [clojure.spec.test.alpha :as stest]
             [multi-stage.test-utils :refer [specialize]]))
 
-(stest/instrument (stest/enumerate-namespace ['meliae.patterns 'multi-stage.ir.ast 'multi-stage.clojure.ast]))
+(stest/instrument
+ (stest/enumerate-namespace
+  ['meliae.patterns
+   'multi-stage.ir.ast
+   'multi-stage.ir.value
+   'multi-stage.clojure.ast]))
 
 (comment
   (ms/defn starts-with-simple [pattern]

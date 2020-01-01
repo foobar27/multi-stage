@@ -62,15 +62,3 @@
                     stage ::expression]
   primitive-call   [sym qualified-symbol?
                     args (s/coll-of ::expression)])
-
-(s/def ::environment vector?)
-
-(defmultipattern value)
-(defpatterns value
-  constant  [value any?]
-  closure   [arity integer?
-             env ::environment
-             body ::expression
-             original-function-symbol symbol?
-             original-argument-symbols (s/coll-of symbol?)]
-  code      [expression ::expression])

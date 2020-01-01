@@ -1,9 +1,9 @@
 (ns multi-stage.ir.generator
-  (:require [multi-stage.ir.ast :refer [->literal ->let ->do ->if ->primitive-call ->variable ->closure
+  (:require [multi-stage.ir.ast :refer [->literal ->let ->do ->if ->primitive-call ->variable
                                         ->fn ->dot ->new ->throw ->apply ->class-reference
-                                        ->literal-vector ->literal-set ->literal-map
-                                        ->constant]
+                                        ->literal-vector ->literal-set ->literal-map]
              :as ast]
+            [multi-stage.ir.value :refer [->closure ->constant]]
             [multi-stage.clojure.ast :as clj]
             [meliae.patterns :refer [match*]]))
 
