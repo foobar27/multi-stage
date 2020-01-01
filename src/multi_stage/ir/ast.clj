@@ -59,6 +59,4 @@
                     false-branch ::expression]
   lift             [expression ::expression]
   run              [body ::expression
-                    stage ::expression]
-  primitive-call   [sym qualified-symbol?
-                    args (s/coll-of ::expression)])
+                    stage ::expression])

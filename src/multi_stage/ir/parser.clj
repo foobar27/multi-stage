@@ -1,6 +1,6 @@
 (ns multi-stage.ir.parser
   (:require [multi-stage.ir.ast :refer [->literal ->variable ->do ->let ->fn ->apply ->dot ->new
-                                        ->if ->lift ->run ->primitive-call ->throw ->class-reference
+                                        ->if ->lift ->run ->throw ->class-reference
                                         ->primitive-symbol ->literal-set ->literal-vector ->literal-map]
              :as ast]
             [clojure.spec.alpha :as s]

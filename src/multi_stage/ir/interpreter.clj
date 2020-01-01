@@ -3,7 +3,7 @@
   (:import [clojure.lang ArityException])
   (:require [clojure.spec.alpha :as s]
             [multi-stage.reflection :refer [invoke-constructor invoke-method]]
-            [multi-stage.ir.ast :refer [->literal ->variable ->fn ->apply ->primitive-call ->let ->if ->do
+            [multi-stage.ir.ast :refer [->literal ->variable ->fn ->apply ->let ->if ->do
                                         ->lift ->run ->throw ->new ->dot ->primitive-symbol
                                         ->literal-set ->literal-vector ->literal-map]
              :as ast]
@@ -171,7 +171,16 @@
                :e   ::ast/expression)
   :ret ::value/value)
 (defn evalms [env e]
-  (do
+  (letfn [(eval-primitive-call [f arguments]
+            (process-arguments env
+                               arguments
+                               (fn evaluate-now [args]
+                                 (apply (resolve f) args))
+                               (fn build-ast [args]
+                                 (->apply (->primitive-symbol f) args))
+                               (fn to-string [args]
+                                 (str "Primitive call to " f
+                                      " with args " (patterns->string args)))))]
     (comment (println "evalms " (pattern->string e)))
     (match* [e]
       [(->literal n)]
@@ -227,17 +236,6 @@
       [(->lift ee)]
       (liftc (evalms env ee))
 
-      [(->primitive-call f args)]
-      (process-arguments env
-                         args
-                         (fn evaluate-now [args]
-                           (apply (resolve f) args))
-                         (fn build-ast [args]
-                           (->primitive-call f args))
-                         (fn to-string [args]
-                           (str "Primitive call to " f
-                                " with args " (patterns->string args))))
-      
       [(->dot object method-name args)]
       (process-arguments env
                          (into [object] args)
@@ -279,15 +277,16 @@
             number-of-arguments (count arguments)]
         (or (match* [function]
               [(->primitive-symbol f)]
-              (evalms env (->primitive-call f arguments))
-
+              (eval-primitive-call f arguments)
+              
               [(->constant x)]
               (cond
                 
                 (or (keyword? x) (symbol? x))
                 ;; (:foo m optional-default) => (get m :foo optional-default)
-                (let [[m & argumnts] arguments]
-                  (evalmsg env (->primitive-call `get (into [m (->literal x)] arguments))))
+                (let [[m & arguments] arguments]
+                  (eval-primitive-call (->primitive-symbol `get)
+                                       (into [m (->literal x)] arguments)))
 
                 (set? x)
                 (if (= number-of-arguments 1)
@@ -300,7 +299,8 @@
                 
                 (vector? x)
                 (if (= number-of-arguments 1)
-                  (evalmsg env (->primitive-call `nth (into [(->literal x)] arguments)))
+                  (eval-primitive-call `nth
+                                       (into [(->literal x)] arguments))
                   (throw (ArityException. number-of-arguments
                                           (str "Invalid number of arguments for vector invocation: " number-of-arguments)))))
               

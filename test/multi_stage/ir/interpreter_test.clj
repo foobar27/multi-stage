@@ -35,15 +35,15 @@
     (is (= (->constant 24)
            (run #(evalms []
                          (->apply (->fn 1
-                                        (->if (->primitive-call `>
-                                                                [(->variable 1)
-                                                                 (->literal 0)])
-                                              (->primitive-call `*
-                                                                [(->variable 1)
-                                                                 (->apply (->variable 0)
-                                                                          [(->primitive-call `-
-                                                                                             [(->variable 1)
-                                                                                              (->literal 1)])])])
+                                        (->if (->apply (->primitive-symbol `>)
+                                                       [(->variable 1)
+                                                        (->literal 0)])
+                                              (->apply (->primitive-symbol `*)
+                                                       [(->variable 1)
+                                                        (->apply (->variable 0)
+                                                                 [(->apply (->primitive-symbol `-)
+                                                                           [(->variable 1)
+                                                                            (->literal 1)])])])
                                               (->literal 1))
                                         'fac
                                         ['x])

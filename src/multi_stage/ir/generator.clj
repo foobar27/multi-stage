@@ -1,5 +1,5 @@
 (ns multi-stage.ir.generator
-  (:require [multi-stage.ir.ast :refer [->literal ->let ->do ->if ->primitive-call ->variable
+  (:require [multi-stage.ir.ast :refer [->literal ->let ->do ->if ->primitive-symbol ->variable
                                         ->fn ->dot ->new ->throw ->apply ->class-reference
                                         ->literal-vector ->literal-set ->literal-map]
              :as ast]
@@ -39,10 +39,9 @@
                     (generate then index->sym)
                     (generate else index->sym))
 
-      [(->primitive-call f args)]
-      (clj/smart-invoke (clj/smart-literal f) ;; TODO or smart-symbol?
-                        (doall (map #(generate % index->sym) args)))
-
+      [(->primitive-symbol f)]
+      (clj/smart-literal f) ;; TODO or smart-symbol?
+      
       [(->variable level)]
       (let [sym (or (get index->sym level)
                     (throw (IllegalArgumentException. (str "Could not get variable " level))))]
