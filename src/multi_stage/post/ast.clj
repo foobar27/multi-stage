@@ -51,7 +51,8 @@
             tail-position? boolean?
             used-symbols (s/coll-of symbol? :kind sequential?)]
   recur    [args (s/coll-of ::expression)]
-  loop     [bindings (s/coll-of ::let-binding)
+  loop     [name symbol?
+            bindings (s/coll-of ::let-binding)
             bodies (s/coll-of ::expression)
             used-symbols (s/coll-of symbol :kind sequential?)])
 
@@ -222,12 +223,8 @@
           (let [bodies (simplify-bodies bodies2)
                 bindings (concat (remove-tail-position-from-bindings bindings)
                                  bindings2)]
-            (if (and (= 1 (count bodies))
-                     (invoke? (first bodies)))
-              (smart-let* bindings bodies) ;; try to inline invoke target
-              ;; TODO why don't we do other inlinings, e.g. if targets, variables etc?
-              (build-let bindings
-                         bodies)))
+            ;; Recur to enable other optimizations, e.g. last-variable-inlining.
+            (smart-let* bindings bodies))
 
           ;; (let [... x 1] x)
           ;; We use recursion via smart-let*, so we don't need to worry
@@ -258,9 +255,8 @@
                        (simplify-bodies bodies)))
           
           ;; One single nested do expression, replace by implicit do.
-          ;; No need to recur, if there has been a single nested let*,
-          ;; it would be equal to body.
-          ;; TODO but recur could do other optimizations, eg invoke, if- or var-inlining
+          ;; Recur to do other optimizations, e.g. last-variable-inlining.
+          ;; TODO update comment
           [(->do bodies2 used-symbols)]
           (build-let (remove-tail-position-from-bindings bindings)
                      bodies2)
@@ -303,22 +299,19 @@
       body)))
 
 (s/fdef smart-loop
-  :args (s/cat :bindings (s/coll-of (s/tuple symbol? ::expression))
+  :args (s/cat :loop-name symbol?
+               :bindings (s/coll-of (s/tuple symbol? ::expression))
                :bodies (s/coll-of ::expression))
   :ret ::expression)
-(defn smart-loop [bindings bodies]
+(defn smart-loop [loop-name bindings bodies]
   ;; Simplify bodies, it's easier to reason about a single body.
   (let [bodies (let [do-block (smart-do bodies)]
                  (if (do? do-block)
                    (::bodies do-block)
                    ;; One of the optimizations.
-                   [do-block]))
-        create-loop (fn [bindings bodies]
-                      (->loop bindings
-                              bodies
-                              ;; TODO shadowing between bindings and bodies
-                              (apply merge-used-symbols-from (concat (map second bindings) bodies))))]
-    (->loop bindings
+                   [do-block]))]
+    (->loop loop-name
+            bindings
             bodies
             ;; TODO remove bindings from used symbols
             (apply merge-used-symbols-from (concat (map second bindings) bodies)))))
@@ -360,7 +353,8 @@
                 ;; Ensure arg-values shadows fn-name OR bodies only use fn-name in tail-calls
                 ;; TODO args shadows fn-name
                 ;; TODO or: bodies only use symbols in tail calls
-                (smart-loop (map (fn [arg-sym arg-value]
+                (smart-loop fn-name
+                            (map (fn [arg-sym arg-value]
                                    [arg-sym arg-value])
                                  args
                                  arg-values)

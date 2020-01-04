@@ -72,18 +72,17 @@
      [(->throw ee used-symbols)]
      `(throw ~(generate ee recur-target))
 
-     [(->loop bindings bodies used-symbols)]
+     [(->loop loop-name bindings bodies used-symbols)]
+     ;; TODO recur-target should be reset here to loop-name?
      `(loop [~@(mapcat (fn [[k v]]
                          [k (generate v recur-target)])
                        bindings)]
-        ~@(map #(generate % recur-target) bodies)) 
+        ~@(map #(generate % loop-name) bodies)) 
      
      [(->invoke f args tail-call? used-symbols)]
      (let [f (generate f recur-target)]
        (if (and tail-call?
-                (or (= f recur-target)
-                    ;; TODO ugly hack I'm really not proud of
-                    (.startsWith (name f) "loop")))
+                (= f recur-target))
          ;; TODO the string-to-symbol conversion is a workaround to an alegded clojure bug
          `(~(symbol "recur") ~@(doall (map #(generate % recur-target) args)))
          `(~f ~@(doall (map #(generate % recur-target) args)))))
