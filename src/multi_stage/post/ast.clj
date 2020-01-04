@@ -31,7 +31,9 @@
   do       [bodies (s/coll-of ::expression)
             used-symbols (s/coll-of symbol? :kind sequential?)]
   if       [condition ::expression
-            then ::expression else ::expression used-symbols (s/coll-of symbol? :kind sequential?)]
+            then ::expression
+            else ::expression
+            used-symbols (s/coll-of symbol? :kind sequential?)]
   fn*      [name symbol?
             signatures (s/coll-of ::signature)
             used-symbols (s/coll-of symbol? :kind sequential?)]
@@ -140,7 +142,7 @@
       [[]]
       (->literal nil [])
 
-      ;; One single do body, flatten.
+      ;; One single do body, flatten
       ;; No recursion needed, since bodies2 had already been run through smart-do.
       ;; No need to change tail call booleans.
       [[(->do bodies2 used-symbols)]]
@@ -152,8 +154,9 @@
       expression
 
       ;; More than one body, flatten nested bodies (one level).
-      ;; No recursion needed, since there will be certainly more than one body.
-      ;; The nested bodies have already beed constructed via smart-do.
+      ;; No recursion needed, since:
+      ;; - The nested bodies have already beed constructed via smart-do.
+      ;; - There will be certainly more than one body.
       [_]
       (let [bodies (-> (mapcat (fn [body]
                                  (if (do? body)
@@ -176,7 +179,9 @@
   ;; This way we also do not need to remove the (butlast) tailcalls from the bodies.
   (let [body (smart-do bodies)]
     (if (seq bindings)
-      (let [[last-binding-sym last-binding-expr] (last bindings)
+      (let [;; The last binding. We did *note* remove tail positions from this.
+            ;; We will take care of this whenever we use last-binding-expr.
+            [last-binding-sym last-binding-expr] (last bindings)
             remove-tail-position-from-bindings (fn [bindings]
                                                  (for [[k v] bindings]
                                                    [k (remove-tail-position v)]))
@@ -190,6 +195,7 @@
                           bodies
                           ;; Determine used symbols from
                           ;; - bindings (taking care of shadowing, incrementally for each binding)
+                          ;;   => TODO don't need to take care of shadowing once we have proper variables
                           ;; - bodies (without the symbols shadowed by the bindings)
                           (into (loop [used-syms (transient [])
                                        shadowed-syms #{}
@@ -201,6 +207,7 @@
                                       (recur used-syms shadowed-syms remainder))
                                     (persistent! used-syms)))
                                 ;; Remove the symbols from the bindings (shadowing).
+                                ;; => TODO we won't need to do that once we have proper variables
                                 (remove (set (map first bindings))
                                         (apply merge-used-symbols-from bodies)))))]
         (match* [body]
@@ -218,6 +225,7 @@
             (if (and (= 1 (count bodies))
                      (invoke? (first bodies)))
               (smart-let* bindings bodies) ;; try to inline invoke target
+              ;; TODO why don't we do other inlinings, e.g. if targets, variables etc?
               (build-let bindings
                          bodies)))
 
@@ -252,12 +260,14 @@
           ;; One single nested do expression, replace by implicit do.
           ;; No need to recur, if there has been a single nested let*,
           ;; it would be equal to body.
+          ;; TODO but recur could do other optimizations, eg invoke, if- or var-inlining
           [(->do bodies2 used-symbols)]
-          (build-let (remove-tail-position-from-bindings bindings) bodies2)
+          (build-let (remove-tail-position-from-bindings bindings)
+                     bodies2)
 
           [(->invoke (->variable fn-symbol used-symbols-variable) args tail-position? used-symbols-invoke)]
           ;; Try to inline fn-symbol
-          (or (if (some #{fn-symbol} (map first bindings))
+          (or (when (some #{fn-symbol} (map first bindings))
                 (let [[[_ function-definition]] (filter (fn [[k v]] (= k fn-symbol))
                                                         bindings)
                       following-bindings (drop 1
@@ -272,13 +282,14 @@
                   (if (not (.contains following-used-symbols fn-symbol))
                     ;; Verify no symbol used by the function is shadowed afterwards.
                     ;; This includes fn-symbol, so we know fn-symbol only appears once.
+                    ;; => TODO this check can be removed if we have proper variables
                     (if (not (some following-bound-symbols (::used-symbols function-definition)))
                       ;; Inline fn-symbol
                       (smart-let* (remove (fn [[k v]]
                                             (= k fn-symbol))
                                           bindings)
                         [(smart-invoke function-definition args)])))))
-              ;; Unable to inline fn-symbol, fall back to defaul case
+              ;; Unable to inline fn-symbol, fall back to default case.
               (build-let (remove-tail-position-from-bindings  bindings)
                          [body]))
           
@@ -297,13 +308,20 @@
   :ret ::expression)
 (defn smart-loop [bindings bodies]
   ;; Simplify bodies, it's easier to reason about a single body.
-  (let [body (::bodies (smart-do bodies))
+  (let [bodies (let [do-block (smart-do bodies)]
+                 (if (do? do-block)
+                   (::bodies do-block)
+                   ;; One of the optimizations.
+                   [do-block]))
         create-loop (fn [bindings bodies]
                       (->loop bindings
                               bodies
                               ;; TODO shadowing between bindings and bodies
                               (apply merge-used-symbols-from (concat (map second bindings) bodies))))]
-    (create-loop bindings bodies)))
+    (->loop bindings
+            bodies
+            ;; TODO remove bindings from used symbols
+            (apply merge-used-symbols-from (concat (map second bindings) bodies)))))
 
 (s/fdef smart-if
   :args (s/alt :condition-then      (s/cat :condition ::expression
@@ -329,7 +347,8 @@
   :ret ::expression)
 (defn smart-invoke [f arg-values]
   (let [f (smart-do [f])
-        arg-values (doall (map #(remove-tail-position (smart-do [%])) arg-values))]
+        arg-values (doall (map #(remove-tail-position (smart-do [%]))
+                               arg-values))]
     ;; Check if we can introduce a loop
     (or (match* [f]
           [(->fn* fn-name signatures used-symbols)]
@@ -347,7 +366,7 @@
                                  arg-values)
                             bodies))))
           ;; TODO check if only tail recursive
-          [e] nil) ;; it's a normal function call
+          [e] nil) ;; it's a normal function call, go to "else" case below
         ;; Else: Normal function call
         (->invoke f
                   arg-values
@@ -363,16 +382,16 @@
                :arguments (s/coll-of ::expression))
   :ret ::expression)
 (defn smart-dot [object method-name arguments]
-  (->dot object
+  (->dot (remove-tail-position object)
          method-name
-         (vec arguments)
+         (vec (map remove-tail-position arguments))
          (apply merge-used-symbols-from object arguments)))
 
 (s/fdef smart-throw
   :args (s/cat :exception ::expression)
   :ret ::expression)
 (defn smart-throw [exception]
-  (->throw exception
+  (->throw (remove-tail-position exception)
            (merge-used-symbols-from exception)))
 
 (s/fdef smart-class-reference
@@ -388,7 +407,7 @@
   :ret ::expression)
 (defn smart-new [class-name arguments]
   (->new class-name
-         (vec arguments)
+         (vec (map remove-tail-position arguments))
          (apply merge-used-symbols-from arguments)))
 
 (s/fdef smart-variable
@@ -413,6 +432,7 @@
                      chunks)]
     (->fn* name
            signatures
+           ;; TODO only tail calls to 'name' should be permitted in the bodies?
            (apply merge-used-symbols-from
                   (mapcat (fn [{:keys [args bodies]}]
                             (remove (set args) (apply merge-used-symbols-from bodies)))
