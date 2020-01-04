@@ -126,6 +126,6 @@
         ir (ir-ast/->run (ir-ast/->literal 0)
                          (ir-ast/->lift (ir-ast/->apply parsed-body
                                                         (vec (map #(ir-ast/->literal (eval %)) static-arguments)))))]
-    (let [output (clj-gen/generate (ir-gen/generate (evalmsg [] ir) nil))]
+    (let [output (clj-gen/generate (ir-gen/generate (evalmsg [] ir nil) nil))]
       (println "GENERATED" output)
       output)))

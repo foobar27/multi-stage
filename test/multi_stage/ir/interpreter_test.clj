@@ -30,7 +30,8 @@
                                                  't1)
                                           'f
                                           ['x])
-                                    [(->literal 3)]))))))
+                                    [(->literal 3)])
+                           nil)))))
   (testing "run factorial 4"
     (is (= (->constant 24)
            (run #(evalms []
@@ -47,7 +48,8 @@
                                               (->literal 1))
                                         'fac
                                         ['x])
-                                  [(->literal 4)])))))))
+                                  [(->literal 4)])
+                         nil))))))
 
 (deftest symbol-inlining
   (testing "let"
@@ -57,7 +59,8 @@
                            (->apply (->variable 0)
                                     [(->literal 1)
                                      (->literal 2)])
-                           'x)))))
+                           'x)
+                    nil))))
   (testing "apply-fn"
     (is (= (->constant 3)
            (evalmsg []
@@ -69,7 +72,8 @@
                                  ['x])
                            (->apply (->variable 0)
                                     [(->primitive-symbol `+)])
-                           'x))))))
+                           'x)
+                    nil)))))
 
 
 (deftest keyword-execution
@@ -79,22 +83,33 @@
                     (->let (->literal :foo)
                            (->apply (->variable 0)
                                     [(->literal {:foo 42})])
-                           'kw))))))
+                           'kw)
+                    nil)))))
 
 (deftest special-functions
   (testing "set"
     (is (= (->constant :b)
-           (evalmsg [] (->apply (->literal #{:a :b}) [(->literal :b)]))))
+           (evalmsg []
+                    (->apply (->literal #{:a :b}) [(->literal :b)])
+                    nil)))
     (is (= (->constant nil)
-           (evalmsg [] (->apply (->literal #{:a :b}) [(->literal :x)])))))
+           (evalmsg []
+                    (->apply (->literal #{:a :b}) [(->literal :x)])
+                    nil))))
   (testing "map"
     (is (= (->constant 42)
-           (evalmsg [] (->apply (->literal {:a 42})
-                                [(->literal :a) (->literal :not-found)]))))
+           (evalmsg []
+                    (->apply (->literal {:a 42})
+                             [(->literal :a) (->literal :not-found)])
+                    nil)))
     (is (= (->constant :not-found)
-           (evalmsg [] (->apply (->literal {:a 42})
-                                [(->literal :x) (->literal :not-found)])))))
+           (evalmsg []
+                    (->apply (->literal {:a 42})
+                             [(->literal :x) (->literal :not-found)])
+                    nil))))
   (testing "vector"
     (is (= (->constant :bar)
-           (evalmsg [] (->apply (->literal [:foo :bar])
-                                [(->literal 1)]))))))
+           (evalmsg []
+                    (->apply (->literal [:foo :bar])
+                             [(->literal 1)])
+                    nil)))))

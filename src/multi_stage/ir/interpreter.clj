@@ -38,8 +38,8 @@
 (defn get-block []
   (:block @state))
 
-(defn conj-block! [s]
-  (swap! state update :block conj s))
+(defn conj-block! [s name]
+  (swap! state update :block conj {::name name, ::expression s}))
 
 (defmacro restore-state [& body]
   `(let [s# @state]
@@ -72,42 +72,44 @@
           val
           (reverse c)))
 
-(defn- unnamed-let [expression body]
-  (->let expression body 'unnamed-let))
+(defn- named-let-block [{:keys [::name ::expression]} body]
+  (->let expression body (or name 'unnamed-let)))
 
 ;; TODO spec
 (defn reify [f-lazy]
   (run #(do (reset-block!)
-            (fold-right unnamed-let (f-lazy) (get-block)))))
+            (fold-right named-let-block (f-lazy) (get-block)))))
 
 ;; TODO spec
-(defn reflect [s]
+(defn reflect [s name]
   (do
-    (conj-block! s)
+    (conj-block! s name)
     (fresh!)))
 
 (defn reifyc [f-lazy]
   (reify #(match* [(f-lazy)]
             [(->code e)] e)))
 
-(defn reflectc [s]
-  (-> s reflect ->code))
+(defn reflectc [s name]
+  (-> s
+      (reflect name)
+      ->code))
 
 (defn reifyv [f-lazy]
   (run #(do (reset-block!)
             (let [res (f-lazy)]
-              (let [b (get-block)]
-                (if (empty? b)
+              (let [block (get-block)]
+                (if (empty? block)
                   res
                   (match* [res]
-                    [(->code l)] (->code (fold-right unnamed-let l b)))))))))
+                    [(->code l)] (->code (fold-right named-let-block l block)))))))))
 
 (declare evalms)
 
 (s/fdef lift
   :args (s/cat :v ::value/value)
   :ret ::ast/expression)
-(defn lift [v]
+(defn lift [v preferred-symbol]
   (match* [v]
     
     [(->constant n)]
@@ -123,20 +125,25 @@
               (-> #(verify-code-or-lift-constant
                     (evalms (into (vec body-env)
                                   (repeatedly (inc arity) (fn [] (->code (fresh!)))))
-                            body))
+                            body
+                            (or preferred-symbol original-function-symbol)))
                   reifyc)
               original-function-symbol
               original-argument-symbols)
-        reflect) 
+        (reflect (or preferred-symbol
+                     original-function-symbol))) 
 
     [(->code e)]
-    (reflect (->lift e))))
+    (reflect (->lift e)
+             preferred-symbol)))
 
 (s/fdef liftc
   :args ::value/value
   :ret ::ast/expression)
-(defn liftc [v]
-  (-> v lift ->code))
+(defn liftc [v preferred-symbol]
+  (-> v
+      (lift preferred-symbol)
+      ->code))
 
 ;;
 ;; Multi-stage evaluation
@@ -149,8 +156,10 @@
     (value/code? arg)     (::value/expression arg)
     (value/constant? arg) (ast/->literal (::value/value arg))))
 
-(defn- process-arguments [env args evaluate-now build-ast to-string]
-  (let [args (map #(evalms env %) args)]
+(defn- process-arguments [env preferred-symbol args evaluate-now build-ast to-string]
+  ;; TODO would be really awesome to take the names of the args from the signature,
+  ;; if available! (maybe with arg prefix?)
+  (let [args (map #(evalms env % 'unnamed-arg) args)]
     (cond
 
       ;; all constants -> evaluate and return constant
@@ -161,18 +170,21 @@
       ;; -> get expression from code, wrap constant into code
       ;; -> reflect code block
       (every? (some-fn value/code? value/constant?) args)
-      (reflectc (build-ast (map remove-code-lift-constant args)))
+      (reflectc (build-ast (map remove-code-lift-constant args))
+                preferred-symbol)
 
       ;; else
       true (throw (IllegalArgumentException. (str "Unhandled case:" (to-string args)))))))
 
 (s/fdef evalms
   :args (s/cat :env ::value/environment
-               :e   ::ast/expression)
+               :e   ::ast/expression
+               :preferred-symbol symbol?)
   :ret ::value/value)
-(defn evalms [env e]
+(defn evalms [env e preferred-symbol]
   (letfn [(eval-primitive-call [f arguments]
             (process-arguments env
+                               preferred-symbol
                                arguments
                                (fn evaluate-now [args]
                                  (apply (resolve f) args))
@@ -188,6 +200,7 @@
 
       [(->literal-vector elements)]
       (process-arguments env
+                         preferred-symbol
                          elements
                          (fn evaluate-now [elements]
                            (vec elements))
@@ -198,6 +211,7 @@
 
       [(->literal-set elements)]
       (process-arguments env
+                         preferred-symbol
                          elements
                          (fn evaluate-now [elements]
                            (set elements))
@@ -208,6 +222,7 @@
 
       [(->literal-map elements)]
       (process-arguments env
+                         preferred-symbol
                          elements
                          (fn evaluate-now [elements]
                            (into {} (map vec elements)))
@@ -226,18 +241,21 @@
       (->closure arity env body original-function-symbol original-argument-symbols)
 
       [(->let e1 e2 original-symbol)]
-      (let [v1 (evalms env e1)]
+      (let [v1 (evalms env e1 original-symbol)]
         (evalms (conj (vec env) v1)
-                e2))
+                e2
+                nil))
 
       [(->do expressions)]
-      (last (map #(evalms env %) expressions))
+      (last (map #(evalms env % preferred-symbol) expressions))
       
       [(->lift ee)]
-      (liftc (evalms env ee))
+      (liftc (evalms env ee preferred-symbol)
+             preferred-symbol)
 
       [(->dot object method-name args)]
       (process-arguments env
+                         preferred-symbol
                          (into [object] args)
                          (fn evaluate-now [[object & args]]
                            (invoke-method object method-name args))
@@ -250,6 +268,7 @@
       
       [(->throw exception)]
       (process-arguments env
+                         preferred-symbol
                          [exception]
                          (fn evaluate-now [[exception]]
                            (throw exception))
@@ -260,6 +279,7 @@
       
       [(->new class-name args)]
       (process-arguments env
+                         preferred-symbol
                          args
                          (fn evaluate-now [args]
                            (if-let [class (resolve class-name)]
@@ -273,7 +293,7 @@
                            (str "Constructor for " class-name " with arguments " (patterns->string args))))
 
       [(->apply function arguments)]
-      (let [function (evalms env function)
+      (let [function (evalms env function 'function)
             number-of-arguments (count arguments)]
         (or (match* [function]
               [(->primitive-symbol f)]
@@ -290,12 +310,16 @@
 
                 (set? x)
                 (if (= number-of-arguments 1)
-                  (evalmsg env (->dot (->literal x) 'get arguments))
+                  (evalmsg env
+                           (->dot (->literal x) 'get arguments)
+                           preferred-symbol)
                   (throw (ArityException. number-of-arguments
                                           (str "Invalid number of arguments for set invocation: " number-of-arguments))))
 
                 (map? x)
-                (evalmsg env (->dot (->literal x) 'valAt  arguments))
+                (evalmsg env
+                         (->dot (->literal x) 'valAt  arguments)
+                         preferred-symbol)
                 
                 (vector? x)
                 (if (= number-of-arguments 1)
@@ -305,48 +329,55 @@
                                           (str "Invalid number of arguments for vector invocation: " number-of-arguments)))))
               
               [(->closure arity body-env body original-function-symbol original-argument-symbols)]
-              (let [arguments (doall (map #(evalms env %) arguments))]
+              (let [arguments (doall (map #(evalms env % 'unnamed-arg) arguments))]
                 (if (= arity (count arguments))
                   (evalms (into (conj (vec body-env)
                                       (->closure arity body-env body original-function-symbol original-argument-symbols))
                                 arguments)
-                          body)
+                          body
+                          preferred-symbol)
                   (throw (IllegalArgumentException. (str "Arity mismatch, expected " arity " but got " (count arguments) " arguments for function " (pattern->string function) " arguments: " (patterns->string arguments))))))
 
               [(->code body)]
-              (let [arguments (doall (map #(evalms env %) arguments))]
+              (let [arguments (doall (map #(evalms env % 'unnamed-arg) arguments))]
                 (if (every? (some-fn code? value/constant?) arguments)
-                  (reflectc (->apply body (map #(::value/expression (verify-code-or-lift-constant %)) arguments)))
+                  (reflectc (->apply body (map #(::value/expression (verify-code-or-lift-constant %)) arguments))
+                            preferred-symbol)
                   (throw (IllegalArgumentException. (str "All non-constant arguments of lifted function application must be lifted, function: " (pattern->string function) " arguments: " (patterns->string arguments)))))))))
       
       [(->if condition then else)]
-      (match* [(evalms env condition)]
+      (match* [(evalms env condition 'if-condition)]
         
         [(->constant n)]
         (if n
-          (evalms env then)
-          (evalms env else))
+          (evalms env then 'if-then)
+          (evalms env else 'if-else))
 
         [(->code condition1)]
         (reflectc (->if condition1
-                        (reifyc #(verify-code-or-lift-constant (evalms env then)))
-                        (reifyc #(verify-code-or-lift-constant (evalms env else))))))
+                        (reifyc #(verify-code-or-lift-constant (evalms env then 'if-then)))
+                        (reifyc #(verify-code-or-lift-constant (evalms env else 'if-else))))
+                  preferred-symbol))
 
       [(->run b ee)]
-      (match* [(evalms env b)]
+      (match* [(evalms env b 'b)]
 
         [(->code b1)]
-        (reflectc (->run b1 (reifyc #(evalms env ee))))
+        (reflectc (->run b1 (reifyc #(evalms env ee)))
+                  preferred-symbol)
 
         [_]
-        (evalmsg env (reifyc #(do
-                                (set-fresh! (count env))
-                                (evalms env ee))))))))
+        (evalmsg env
+                 (reifyc #(do
+                            (set-fresh! (count env))
+                            (evalms env ee preferred-symbol)))
+                 preferred-symbol)))))
 
 
 (s/fdef evalmsg
   :args (s/cat :env ::value/environment
-               :e ::ast/expression)
+               :e ::ast/expression
+               :preferred-symbol symbol?)
   :ret  ::ast/expression)
-(defn evalmsg [env e]
-  (reifyv #(evalms env e)))
+(defn evalmsg [env e preferred-symbol]
+  (reifyv #(evalms env e preferred-symbol)))
