@@ -89,3 +89,18 @@
 
 (defn variable->source-context [v]
   (get v ::source-context))
+
+;; == Handling of source contexts
+
+(def unknown-source-context
+  (->source-context "unknown" 0 0))
+
+(defn sexp->source-context
+  "Use the meta information from a clojure expression to determine the
+  source context."
+  [sexp]
+  (let [{:keys [file line column]} (meta sexp)]
+    (if (and line column) ;; file might be nil (in the repl)
+      (->source-context file line column)
+      unknown-source-context)))
+;;       (throw (IllegalArgumentException. (str "Could not get source-context from " sexp)))

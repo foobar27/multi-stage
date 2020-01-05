@@ -1,7 +1,42 @@
 (ns multi-stage.core
   (:refer-clojure :exclude [def defn defmulti defmethod])
   (:require [multi-stage.impl.core :as impl]
+            [multi-stage.common.core :refer [sexp->source-context]]
+            [multi-stage.pre.parser :refer [clj->pre]]
+            [multi-stage.pre.free-variables :refer [pre->free-global-variables]]
+            [multi-stage.utils :refer [make-local-symbol]]
             [clojure.spec.alpha :as s]))
+
+(defmacro with-clean-definitions [& bodies]
+  `(impl/with-clean-definitions ~@bodies))
+
+(clojure.core/defn expand-and-register-def!
+  "Abuse macro-expansion of defn by replacing ms-defn with def.
+  Be careful to keep the meta data of the original &form.
+  replacement should be a macro which expands to a def-form"
+  [form replacement]
+  (let [form (with-meta (macroexpand-1 `(~replacement ~@(rest form)))
+               (meta form))
+        source-context (sexp->source-context form)
+        ;; TODO missing in the following destructuring: docstring
+        [_ name value] form
+        value (if (seq value)
+                (if-let [[fn-sym & arities] value]
+                  (if (and (= `fn fn-sym)
+                           ;; There's no name yet
+                           (not (symbol? (first arities))))
+                    `(fn ~name ~@arities)))
+                nil)
+        value (clj->pre value {})
+        variable (impl/create-variable! (make-local-symbol name) source-context)
+        dependencies (disj (into #{}
+                                 (pre->free-global-variables value
+                                                             (impl/determine-all-registered-variables)))
+                           ;; Remove self reference to avoid recursion in subsequent algorithm.
+                           variable)]
+    (impl/register-definition! variable value dependencies)
+    ;; TODO can we define this in a better way, with docstrings etc, such that editors help to do auto-complete?
+    form))
 
 (s/fdef def
   :args (s/alt :arity-1 (s/cat :symbol symbol?)
@@ -15,7 +50,7 @@
   "Like clojure.core/def, but to be used in multi-stage programs."
   {:arglists '([symbol docstring? init?])}
   [& args]
-  (impl/expand-and-register-def! &form 'def))
+  (expand-and-register-def! &form 'def))
 
 (s/fdef defn
   :args :clojure.core.specs.alpha/defn-args
@@ -25,7 +60,7 @@
   {:arglists '([name doc-string? attr-map? [params*] prepost-map? body]
                [name doc-string? attr-map? ([params*] prepost-map? body)+ attr-map?])}
   [& args]
-  (impl/expand-and-register-def! &form 'clojure.core/defn))
+  (expand-and-register-def! &form 'clojure.core/defn))
 
 (s/fdef defn-
   :args :clojure.core.specs.alpha/defn-args
@@ -35,4 +70,4 @@
   {:arglists '([name doc-string? attr-map? [params*] prepost-map? body]
                [name doc-string? attr-map? ([params*] prepost-map? body)+ attr-map?])}
   [& args]
-  (impl/expand-and-register-def! &form 'clojure.core/defn-))
+  (expand-and-register-def! &form 'clojure.core/defn-))

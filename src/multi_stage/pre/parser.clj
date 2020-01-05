@@ -4,8 +4,9 @@
                                          ->class-reference ->variable-reference ->symbol-reference
                                          class-reference? variable-reference? symbol-reference?]
              :as pre-ast]
-            [multi-stage.common.core :as common :refer [->variable ->source-context
+            [multi-stage.common.core :as common :refer [->variable unknown-source-context sexp->source-context
                                                         mockable-gensym]]
+            [multi-stage.impl.core :refer [get-registered-global-variable]]
             [multi-stage.utils :refer [resolve-symbol var->sym unqualified-symbol?]]
             [clojure.spec.alpha :as s]
             [clojure.walk :refer [macroexpand-all]]))
@@ -76,21 +77,6 @@
                             (vec [(count (:args arity)) arity])))]
     {:name name
      :arities arities}))
-
-;; == Handling of source contexts
-
-(def unknown-source-context
-  (->source-context "unknown" 0 0))
-
-(defn- sexp->source-context
-  "Use the meta information from a clojure expression to determine the
-  source context."
-  [sexp]
-  (let [{:keys [file line column]} (meta sexp)]
-    (if (and line column) ;; file might be nil (in the repl)
-      (->source-context file line column)
-      unknown-source-context)))
-;;       (throw (IllegalArgumentException. (str "Could not get source-context from " sexp)))
 
 ;; == Handling of variables
 
@@ -207,19 +193,22 @@
       (or (if-let [variable (get scope sexp)]
             (->variable-reference source-context variable))
           (if-let [resolved-symbol (resolve-symbol sexp)]
-            ;; The symbol is not defined in the scope which is
-            ;; currently being translated. Maybe it is defined
-            ;; outside of this scope.
-            (cond
-              (class? resolved-symbol)
-              ;; sexp is already a qualified sybmol, the class reference
-              (->class-reference source-context sexp)
+            (if-let [global-variable (if (var? resolved-symbol)
+                                       (get-registered-global-variable *ns* (var->sym resolved-symbol)))]
+              (->variable-reference source-context global-variable)
+              ;; The symbol is not defined in the scope which is
+              ;; currently being translated. Maybe it is defined
+              ;; outside of this scope.
+              (cond
+                (class? resolved-symbol)
+                ;; sexp is already a qualified sybmol, the class reference
+                (->class-reference source-context sexp)
 
-              (var? resolved-symbol)
-              (->symbol-reference source-context (var->sym resolved-symbol))
+                (var? resolved-symbol)
+                (->symbol-reference source-context (var->sym resolved-symbol))
 
-              true
-              (throw (IllegalArgumentException. (str "Do not know what this symbol points to " resolved-symbol)))))
+                true
+                (throw (IllegalArgumentException. (str "Do not know what this symbol points to " resolved-symbol))))))
           (throw (IllegalArgumentException. (str "Unknown symbol: " sexp))))
       
       (seq? sexp)
@@ -280,7 +269,6 @@
                                  body-fn
                                  (bind-variable scope k)
                                  (conj new-arguments k))]
-      (println "source-context" source-context)
       (->let source-context k v body))
     ;; Base case of recursion (no bindings, implicit do).
     (body-fn source-context scope new-arguments)))

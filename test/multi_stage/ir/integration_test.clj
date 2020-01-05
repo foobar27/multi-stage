@@ -1,7 +1,11 @@
 (ns multi-stage.ir.integration-test
   (:require [multi-stage.ir.core :refer [lift run]]
             [multi-stage.test-utils :refer [verify-pattern remove-gensym]]
+            [multi-stage.pre.ast :as pre-ast]
             [multi-stage.post.ast]
+            [multi-stage.core :as ms]
+            [multi-stage.ir.parser :as ir-parser]
+            [multi-stage.impl.core :as impl]
             [meliae.patterns :refer [print-pattern]]
             [clojure.test :refer :all]
             [clojure.spec.test.alpha :as stest]
@@ -14,45 +18,60 @@
    'multi-stage.ir.value
    'multi-stage.post.ast]))
 
-(comment
-  (ms/defn starts-with-simple [pattern]
+(ms/defn starts-with-simple [pattern]
+  (fn [string]
+    (if (seq pattern)
+      (if (seq string)
+        (if (= (lift (first pattern))
+               (first string))
+          ((starts-with-simple (rest pattern)) (rest string))))
+      (lift true))))
+
+;; TODO ms/defn- is buggy
+(ms/defn starts-with-polymorphic [maybe-lift]
+  (fn rec [prefix]
     (fn [string]
-      (if (seq pattern)
+      (if (seq prefix)
         (if (seq string)
-          (if (= (lift (first pattern))
+          (if (= (lift (first prefix))
                  (first string))
-            ((starts-with-simple (rest pattern)) (rest string))))
-        (lift true))))
-
-  (ms/defn- starts-with-polymorphic [maybe-lift]
-    (fn rec [prefix]
-      (fn [string]
-        (if (seq prefix)
-          (if (seq string)
-            (if (= (lift (first prefix))
-                   (first string))
-              ((rec (rest prefix)) (rest string))
-              (maybe-lift false))
+            ((rec (rest prefix)) (rest string))
             (maybe-lift false))
-          (maybe-lift true))))) 
+          (maybe-lift false))
+        (maybe-lift true)))))
 
-  (ms/def ^:private starts-with-specialized
-    (starts-with-polymorphic (fn [e] (lift e))))
+(ms/def ^:private starts-with-specialized
+  (starts-with-polymorphic (fn [e] (lift e))))
 
-  (ms/def ^:private starts-with-generic
-    (starts-with-polymorphic (fn [e] e)))
+(ms/def ^:private starts-with-generic
+  (starts-with-polymorphic (fn [e] e)))
 
-  (ms/defn starts-with-optimized [prefix]
-    (if (< (count pattern) 20)
-      (run 0 (lift (starts-with-specialized pattern)))
-      (starts-with-generic pattern)))
+(ms/defn starts-with-optimized [pattern string]
+  (if (< (count pattern) 20)
+    (run 0 (lift (starts-with-specialized pattern)))
+    (starts-with-generic pattern)))
 
-  (ms/def starts-with-ab-simple
-    (partial-lift starts-with-simple "ab"))
+(let [variable (impl/get-registered-global-variable *ns* `starts-with-optimized)
+      definition (impl/variable->definition variable)
+      dependencies (for [variable (drop-last (impl/variable->sorted-dependencies variable))]
+                     [variable (impl/variable->definition variable)])
+      pre (reduce (fn [expression [variable variable-definition]]
+                    (pre-ast/->let (::pre-ast/source-context expression)
+                                   variable
+                                   variable-definition
+                                   expression))
+                  definition
+                  (reverse dependencies))
+      ir (ir-parser/pre->ir pre {})
+      ;; TODO specialize
+      ]
+  ir)
 
-  (ms/def starts-with-ab
-    (partial-lift starts-with-optimized "ab")))
+(ms/def starts-with-ab-simple
+  (partial-lift starts-with-simple "ab"))
 
+(ms/def starts-with-ab
+  (partial-lift starts-with-optimized "ab"))
 
 ;;
 ;; TODO remove
