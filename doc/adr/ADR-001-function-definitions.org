@@ -1,0 +1,59 @@
+#+TITLE: ADR-001: Function Definitions
+
+* Status
+
+Accepted.
+
+* Context
+
+Currently we can only translate individual clojure expressions. We
+should support multiple expressions. For this we need to keep a
+registry, and the question is: how does the interpreter know the code
+which is put into the registry?
+
+* Possible Solutions
+
+** Solution A: Intermediate layer to resolve definitions
+
+For each definition in the registry we store the pre-AST, and the
+names of the other required definitions.
+
+When we want to translate a definion to IR, we inject the required
+definitions as let-statements at the outside of the pre-AST, then we
+translate it to IR.
+
+Advantages:
+- Simple.
+
+Disadvantages:
+- Might not account for all the dynamic use cases (we will see if we
+  will be able to make a self-hosted optimal language).
+- Compilation performance: Needs to do IR-conversion and evalmsg again
+  and again on the same definitions.
+
+** Solution B: Dynamically access registry from the interpreter
+
+We store IR code in the pre-AST.
+
+When the interpreter sees a reference to a definition from the
+library, it reflects the defintion (and thus will add a let-statement
+with the definition around it afterwards).
+
+In order to deduplicate the definitions, and in order to support
+mutual recursion properly, we would need a sea-of-nodes representation
+(instead the current tree-of-nodes).
+
+Advantages:
+- New symbols can be generated dynamically (do we need this for
+  self-hosting?)
+
+Disadvantages:
+- Complex, not sure if it will even work out theoretically.
+- Requires lots of preliminary work (sea-of-nodes), which might
+  actually break our goal to have an optimal translation.
+
+* Decision
+
+We implement *Solution A* It is simpler, but might not solve all the
+problems. However it is difficult to know if will even lead onto serious
+problems.

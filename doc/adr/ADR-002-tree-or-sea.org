@@ -1,0 +1,37 @@
+#+TITLE: ADR-003: Sea or Tree of Nodes?
+
+* Status
+
+Accepted.
+
+* Context
+
+We need to find a representation for the intermediate representation
+(IR) nodes.
+
+* Possible Solutions
+
+** Tree of Nodes
+
+The classical representation is a tree of nodes, which represents the
+nesting of the nodes.
+
+Advantages:
+- Simple
+
+** Sea of Nodes
+
+scala-lms uses a sea of nodes, which is quite handy for deeper
+optimizations, e.g. code deduplication/motion.
+
+Advantages:
+- allows for deeper optimizations.
+
+Disadvantages:
+- Complex to implement.
+- Not sure how much work it would be to get a self-hosting language.
+
+* Decision
+
+We implement *Tree of Nodes*. Afterwards we might still experiment
+with a Sea of Nodes.
