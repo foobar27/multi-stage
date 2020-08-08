@@ -40,3 +40,10 @@
   (if (unqualified-symbol? arg)
     arg
     (symbol (name arg))))
+
+(defmacro def-qualified [qualified-symbol value]
+  `(intern (if-let [the-ns# (namespace '~qualified-symbol)]
+             (symbol the-ns#)
+             (throw (IllegalArgumentException. "Please use clojure.core/def for unqualified symbols!")))
+           (unqualify-symbol '~qualified-symbol)
+           ~value))

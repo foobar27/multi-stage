@@ -10,7 +10,7 @@
             [multi-stage.ir.interpreter :as interpreter]
             [multi-stage.ir.generator :as ir-gen]
             [multi-stage.post.generator :as post-gen]
-            [multi-stage.utils :refer [make-local-symbol resolve-symbol var->sym]]
+            [multi-stage.utils :refer [make-local-symbol resolve-symbol var->sym def-qualified]]
             [clojure.spec.alpha :as s]))
 
 (defmacro with-clean-definitions [& bodies]
@@ -84,8 +84,8 @@
   (expand-and-register-def! &form 'clojure.core/defn-))
 
 (defmacro compile [sym]
-  (let [resolved-sym (resolve-symbol sym)
-        variable (or (impl/get-registered-global-variable *ns* (var->sym resolved-sym))
+  (let [resolved-sym (var->sym (resolve-symbol sym))
+        variable (or (impl/get-registered-global-variable *ns* resolved-sym)
                      (throw (RuntimeException. (str "Unable to resolve symbol in this context, did you define it with ms/def? " sym))))
         definition (impl/variable->definition variable)
         substitutions (into {}
@@ -113,7 +113,7 @@
                                           f-arg-vars))
                     (reverse dependencies))
         pre (pre-ast/->fn f-source-context
-                          f-var-inner ;; TODO needs to be UNqualified
+                          f-var-inner
                           f-arg-vars
                           pre)
         ir (ir-parser/pre->ir pre {})
@@ -122,4 +122,4 @@
                   (ir-gen/generate nil)
                   (post-gen/generate nil))]
     (println "Compiled" resolved-sym)
-    `(def ~'sym ~value)))
+    `(def-qualified ~resolved-sym ~value)))
