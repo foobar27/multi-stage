@@ -35,3 +35,8 @@
 (defn unqualified-symbol? [s]
   (and (symbol? s)
        (not (qualified-symbol? s))))
+
+(defn unqualify-symbol [arg]
+  (if (unqualified-symbol? arg)
+    arg
+    (symbol (name arg))))

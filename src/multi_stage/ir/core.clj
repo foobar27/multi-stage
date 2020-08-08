@@ -3,7 +3,8 @@
             [clojure.walk :refer [macroexpand-all]]))
 
 (defn lift [arg]
-  (throw (IllegalStateException. "Must be in parsed block.")))
+  (comment ;; TODO re-enable this (conflicts with the register-definition! macro)
+    (throw (IllegalStateException. "Must be in parsed block."))))
 
 (comment  
   (loop [x 1]
@@ -51,5 +52,6 @@
                (throw-unrecognized)))
       (throw-unrecognized))))
 
-(defn run [arg]
-  (throw (IllegalStateException. "Must be in parsed block.")))
+(defn run [level arg]
+  (comment ;; TODO re-enable this (conflicts with the register-definition! macro)
+    (throw (IllegalStateException. "Must be in parsed block."))))

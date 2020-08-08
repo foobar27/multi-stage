@@ -113,3 +113,6 @@
                     (->apply (->literal [:foo :bar])
                              [(->literal 1)])
                     nil)))))
+
+(deftest functions
+  (testing ))

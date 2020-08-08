@@ -1,5 +1,6 @@
 (ns multi-stage.ir.integration-test
   (:require [multi-stage.ir.core :refer [lift run]]
+            [multi-stage.ir.interpreter :as interpreter]
             [multi-stage.test-utils :refer [verify-pattern remove-gensym]]
             [multi-stage.pre.ast :as pre-ast]
             [multi-stage.post.ast]
@@ -10,13 +11,93 @@
             [clojure.test :refer :all]
             [clojure.spec.test.alpha :as stest]
             [multi-stage.test-utils :refer [specialize]]))
-
 (stest/instrument
  (stest/enumerate-namespace
   ['meliae.patterns
    'multi-stage.ir.ast
    'multi-stage.ir.value
    'multi-stage.post.ast]))
+
+;;
+;; No argument, constant function.
+;;
+
+(comment
+  (multi-stage.impl.core/reset-definitions!)
+
+  (multi-stage.impl.core/determine-all-registered-variables)
+  
+  (multi-stage.impl.core/print-variable-definition `plus)
+  (multi-stage.impl.core/print-variable-definition `sum-1-to-n)
+
+  
+  
+  )
+
+
+(ms/defn return-42 []
+  42)
+
+(ms/compile return-42)
+
+(deftest test-return-42
+  (testing
+      (is (= 42 (return-42)))))
+
+;;
+;; Two-argument function
+;;
+
+(ms/defn plus [x y]
+  (+ x y))
+
+(ms/compile plus)
+
+(deftest test-plus
+  (testing
+      (is (= 3 (plus 1 2)))))
+
+;;
+;; Adding numbers from 1 to n
+;; (reusing the function plus which was defined above)
+;;
+
+(ms/defn plus-sum [n]
+  (let [plus (fn [x y] (+ x y))] ;; TODO reuse!
+    (loop [n n, sum 0]
+      (if (> n 0)
+        (recur (dec n) (plus sum n))
+        sum))))
+
+(ms/compile plus-sum)
+
+(ms/defn plus-sum-2 [n]
+  (let [plus (fn [x y] (+ x y))
+        delegate (fn [n]
+                   (loop [n n, sum 0]
+                     (if (> n 0)
+                       (recur (dec n) (plus sum n))
+                       sum)))]
+    (delegate n)))
+
+(ms/compile plus-sum-2)
+
+(ms/defn sum-1-to-n [n]
+  (loop [n n, sum 0]
+    (if (> n 0)
+      (recur (dec n) (plus sum n))
+      sum)))
+
+(ms/compile sum-1-to-n)
+
+(deftest test-sum-1-to-n
+  (testing
+      (is (= 55 (sum-1-to-n 10)))))
+
+
+;;
+;; Prefix matching for strings
+;;
 
 (ms/defn starts-with-simple [pattern]
   (fn [string]
@@ -26,6 +107,8 @@
                (first string))
           ((starts-with-simple (rest pattern)) (rest string))))
       (lift true))))
+
+(ms/compile starts-with-simple)
 
 ;; TODO ms/defn- is buggy
 (ms/defn starts-with-polymorphic [maybe-lift]
@@ -46,12 +129,18 @@
 (ms/def ^:private starts-with-generic
   (starts-with-polymorphic (fn [e] e)))
 
+
+(ms/compile starts-with-generic)
+
 (ms/defn starts-with-optimized [pattern string]
   (if (< (count pattern) 20)
     (run 0 (lift (starts-with-specialized pattern)))
     (starts-with-generic pattern)))
 
-(let [variable (impl/get-registered-global-variable *ns* `starts-with-optimized)
+(ms/def foo-ab
+  (run 0 (lift (starts-with-specialized "ab"))))
+
+(let [variable (impl/get-registered-global-variable *ns* `foo-ab)
       definition (impl/variable->definition variable)
       dependencies (for [variable (drop-last (impl/variable->sorted-dependencies variable))]
                      [variable (impl/variable->definition variable)])
@@ -63,11 +152,14 @@
                   definition
                   (reverse dependencies))
       ir (ir-parser/pre->ir pre {})
-      ;; TODO specialize
+      ir (interpreter/evalmsg [] ir 'foo-ab)
+      ;; TODO ir-gen/generate
+      ;; TODO clj-gen/generate
       ]
-  ir)
+  (print-pattern ir))
 
 (ms/def starts-with-ab-simple
+  ;; TODO this would mean that we provide IR code where PRE code is expected!
   (partial-lift starts-with-simple "ab"))
 
 (ms/def starts-with-ab

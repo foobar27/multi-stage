@@ -1,6 +1,6 @@
 (ns multi-stage.common.core
   (:require [clojure.spec.alpha :as s]
-            [multi-stage.utils :refer [unqualified-symbol?]]))
+            [multi-stage.utils :refer [unqualified-symbol? unqualify-symbol]]))
 
 ;; == Symbol generation
 
@@ -80,6 +80,13 @@
   {::unique-name unique-name
    ::original-symbol original-symbol
    ::source-context source-context})
+
+
+(defn unqualify-and-duplicate-variable [{:keys [::original-symbol ::source-context]} suffix]
+  (let [local-symbol (unqualify-symbol original-symbol)]
+    (->variable (mockable-gensym (str local-symbol suffix))
+                local-symbol
+                source-context)))
 
 (defn variable->unique-name [v]
   (get v ::unique-name))

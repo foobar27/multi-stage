@@ -7,7 +7,6 @@
                      (pre->free-global-variables-impl item all-global-variables))
         recur-items (fn [items]
                       (mapcat recur-item items))]
-    (println "FREE VARIABLES" e)
     (match* [e]
       
       [(ast/->literal source-context value)]
