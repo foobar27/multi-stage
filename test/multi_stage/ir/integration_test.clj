@@ -30,8 +30,7 @@
   (multi-stage.impl.core/print-variable-definition `plus)
   (multi-stage.impl.core/print-variable-definition `sum-1-to-n)
 
-  
-  
+  (multi-stage.impl.core/symbol->symbols-to-recompile `plus)
   )
 
 

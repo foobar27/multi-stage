@@ -11,7 +11,8 @@
   {::symbol->variable {}
    ::variable->definition {}
    ::variable->dependencies {}
-   ::symbol->meta {}})
+   ::symbol->meta {}
+   ::compiled-symbols #{}})
 
 (defonce ^:dynamic *registered-definitions* (atom empty-definitions))
 
@@ -48,6 +49,15 @@
            variable)
     variable))
 
+(s/fdef register-compiled-symbol!
+  :args (s/cat :symbol qualified-symbol?)
+  :ret any?)
+(defn register-compiled-symbol! [symbol]
+  (swap! *registered-definitions* update
+         ::compiled-symbols
+         conj
+         symbol))
+
 (s/fdef variable->definition
   :args (s/cat :variable ::common/variable)
   :ret any?)
@@ -82,3 +92,15 @@
                   (concat (mapcat f (get deps root))
                           [root])))]
     (f variable)))
+
+(defn symbol->symbols-to-recompile [sym]
+  (into #{}
+        (let [compiled-symbols (get @*registered-definitions* ::compiled-symbols)]
+          (filter (fn [candidate-symbol]
+                    (let [candidate (get-registered-global-variable (namespace candidate-symbol) candidate-symbol)
+                          candidate-dependencies (->> (variable->sorted-dependencies candidate)
+                                                      (map common/variable->original-symbol)
+                                                      (into #{}))]
+                      (and (not (= sym candidate-symbol))
+                           (contains? candidate-dependencies sym))))
+                  compiled-symbols))))

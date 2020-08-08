@@ -122,4 +122,7 @@
                   (ir-gen/generate nil)
                   (post-gen/generate nil))]
     (println "Compiled" resolved-sym)
-    `(def-qualified ~resolved-sym ~value)))
+    `(do
+       (def-qualified ~resolved-sym ~value)
+       (impl/register-compiled-symbol! '~resolved-sym)
+       nil)))
