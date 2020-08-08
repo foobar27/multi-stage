@@ -84,7 +84,8 @@
   (expand-and-register-def! &form 'clojure.core/defn-))
 
 (defmacro compile [sym]
-  (let [variable (or (impl/get-registered-global-variable *ns* (var->sym (resolve-symbol sym)))
+  (let [resolved-sym (resolve-symbol sym)
+        variable (or (impl/get-registered-global-variable *ns* (var->sym resolved-sym))
                      (throw (RuntimeException. (str "Unable to resolve symbol in this context, did you define it with ms/def? " sym))))
         definition (impl/variable->definition variable)
         substitutions (into {}
@@ -120,4 +121,5 @@
         value (-> ir
                   (ir-gen/generate nil)
                   (post-gen/generate nil))]
+    (println "Compiled" resolved-sym)
     `(def ~'sym ~value)))
