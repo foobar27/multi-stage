@@ -87,35 +87,7 @@
   (let [resolved-sym (var->sym (resolve-symbol sym))
         variable (or (impl/get-registered-global-variable *ns* resolved-sym)
                      (throw (RuntimeException. (str "Unable to resolve symbol in this context, did you define it with ms/def? " sym))))
-        definition (impl/variable->definition variable)
-        substitutions (into {}
-                            (for [variable (impl/variable->sorted-dependencies variable)]
-                              [variable (common/unqualify-and-duplicate-variable variable "-local")]))
-        dependencies (for [variable (impl/variable->sorted-dependencies variable)
-                           :let [local-variable (get substitutions variable)]]
-                       [local-variable
-                        (pre-algorithms/substitute-variables (impl/variable->definition variable)
-                                                             substitutions)])
-        [f-var f-definition] (last dependencies)
-        f-source-context (common/variable->source-context f-var)
-        f-var-inner (common/unqualify-and-duplicate-variable f-var "-inner")
-        f-arg-vars (::pre-ast/arguments f-definition)
-        pre (reduce (fn [expression [variable variable-definition]]
-                      (pre-ast/->let (::pre-ast/source-context expression)
-                                     variable
-                                     variable-definition
-                                     expression))
-                    (pre-ast/->apply f-source-context
-                                     (pre-ast/->variable-reference
-                                      f-source-context
-                                      f-var)
-                                     (map #(pre-ast/->variable-reference f-source-context %)
-                                          f-arg-vars))
-                    (reverse dependencies))
-        pre (pre-ast/->fn f-source-context
-                          f-var-inner
-                          f-arg-vars
-                          pre)
+        pre (impl/build-pre-ast-with-dependencies variable)
         ir (ir-parser/pre->ir pre {})
         ir (interpreter/evalmsg [] ir sym)
         value (-> ir

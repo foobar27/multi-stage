@@ -2,6 +2,8 @@
   (:require [multi-stage.utils :refer [make-local-symbol]]
             [multi-stage.common.core :as common :refer [sexp->source-context mockable-gensym]]
             [multi-stage.common.core :refer [->variable]]
+            [multi-stage.pre.ast :as pre-ast]
+            [multi-stage.pre.algorithms :as pre-algorithms]
             [multi-stage.pre.free-variables :refer [pre->free-global-variables]]
             [clojure.spec.alpha :as s]))
 
@@ -104,3 +106,35 @@
                       (and (not (= sym candidate-symbol))
                            (contains? candidate-dependencies sym))))
                   compiled-symbols))))
+
+(defn build-pre-ast-with-dependencies [variable]
+  (let [definition (variable->definition variable)
+        substitutions (into {}
+                            (for [variable (variable->sorted-dependencies variable)]
+                              [variable (common/unqualify-and-duplicate-variable variable "-local")]))
+        dependencies (for [variable (variable->sorted-dependencies variable)
+                           :let [local-variable (get substitutions variable)]]
+                       [local-variable
+                        (pre-algorithms/substitute-variables (variable->definition variable)
+                                                             substitutions)])
+        
+        [f-var f-definition] (last dependencies)
+        f-source-context (common/variable->source-context f-var)
+        f-arg-vars (::pre-ast/arguments f-definition)
+        pre (reduce (fn [expression [variable variable-definition]]
+                      (pre-ast/->let (::pre-ast/source-context expression)
+                                     variable
+                                     variable-definition
+                                     expression))
+                    (pre-ast/->apply f-source-context
+                                     (pre-ast/->variable-reference
+                                      f-source-context
+                                      f-var)
+                                     (map #(pre-ast/->variable-reference f-source-context %)
+                                          f-arg-vars))
+                    (reverse dependencies))
+        pre (pre-ast/->fn f-source-context
+                          (common/unqualify-and-duplicate-variable f-var "-inner")
+                          f-arg-vars
+                          pre)]
+    pre))
