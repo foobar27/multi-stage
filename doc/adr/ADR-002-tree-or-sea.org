@@ -1,4 +1,4 @@
-#+TITLE: ADR-003: Sea or Tree of Nodes?
+#+TITLE: ADR-002: Sea or Tree of Nodes?
 
 * Status
 
