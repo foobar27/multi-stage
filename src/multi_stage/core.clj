@@ -85,14 +85,7 @@
 
 (defmacro compile [sym]
   (let [resolved-sym (var->sym (resolve-symbol sym))
-        variable (or (impl/get-registered-global-variable *ns* resolved-sym)
-                     (throw (RuntimeException. (str "Unable to resolve symbol in this context, did you define it with ms/def? " sym))))
-        pre (impl/build-pre-ast-with-dependencies variable)
-        ir (ir-parser/pre->ir pre {})
-        ir (interpreter/evalmsg [] ir sym)
-        value (-> ir
-                  (ir-gen/generate nil)
-                  (post-gen/generate nil))]
+        value (impl/sym->sexp sym)]
     (println "Compiled" resolved-sym)
     `(do
        (def-qualified ~resolved-sym ~value)

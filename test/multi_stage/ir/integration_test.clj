@@ -61,26 +61,6 @@
 ;; (reusing the function plus which was defined above)
 ;;
 
-(ms/defn plus-sum [n]
-  (let [plus (fn [x y] (+ x y))] ;; TODO reuse!
-    (loop [n n, sum 0]
-      (if (> n 0)
-        (recur (dec n) (plus sum n))
-        sum))))
-
-(ms/compile plus-sum)
-
-(ms/defn plus-sum-2 [n]
-  (let [plus (fn [x y] (+ x y))
-        delegate (fn [n]
-                   (loop [n n, sum 0]
-                     (if (> n 0)
-                       (recur (dec n) (plus sum n))
-                       sum)))]
-    (delegate n)))
-
-(ms/compile plus-sum-2)
-
 (ms/defn sum-1-to-n [n]
   (loop [n n, sum 0]
     (if (> n 0)

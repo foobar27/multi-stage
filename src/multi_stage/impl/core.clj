@@ -1,10 +1,14 @@
 (ns multi-stage.impl.core
-  (:require [multi-stage.utils :refer [make-local-symbol]]
+  (:require [multi-stage.utils :refer [make-local-symbol var->sym resolve-symbol]]
             [multi-stage.common.core :as common :refer [sexp->source-context mockable-gensym]]
             [multi-stage.common.core :refer [->variable]]
             [multi-stage.pre.ast :as pre-ast]
             [multi-stage.pre.algorithms :as pre-algorithms]
             [multi-stage.pre.free-variables :refer [pre->free-global-variables]]
+            [multi-stage.ir.parser :as ir-parser]
+            [multi-stage.ir.generator :as ir-gen]
+            [multi-stage.ir.interpreter :as ir-interpreter]
+            [multi-stage.post.generator :as post-gen]
             [clojure.spec.alpha :as s]))
 
 ;; # Handling of definitions
@@ -138,3 +142,14 @@
                           f-arg-vars
                           pre)]
     pre))
+
+(defn sym->sexp [sym]
+  (let [resolved-sym (var->sym (resolve-symbol sym))
+        variable (or (get-registered-global-variable *ns* resolved-sym)
+                     (throw (RuntimeException. (str "Unable to resolve symbol in this context, did you define it with ms/def? " sym))))
+        pre (build-pre-ast-with-dependencies variable)
+        ir (ir-parser/pre->ir pre {})
+        ir (ir-interpreter/evalmsg [] ir sym)]
+    (-> ir
+        (ir-gen/generate nil)
+        (post-gen/generate nil))))
