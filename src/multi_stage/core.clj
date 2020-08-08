@@ -16,6 +16,15 @@
 (defmacro with-clean-definitions [& bodies]
   `(impl/with-clean-definitions ~@bodies))
 
+(defmacro compile [sym]
+  (let [resolved-sym (var->sym (resolve-symbol sym))
+        symbols-to-recompile (impl/symbol->symbols-to-recompile resolved-sym)]
+    (println "Compiled" resolved-sym)
+    `(do
+       (def-qualified ~resolved-sym ~(impl/sym->sexp sym))
+       (impl/register-compiled-symbol! '~resolved-sym)
+       nil)))
+
 (clojure.core/defn expand-and-register-def!
   "Abuse macro-expansion of defn by replacing ms-defn with def.
   Be careful to keep the meta data of the original &form.
@@ -26,9 +35,8 @@
         source-context (sexp->source-context form)
         ;; TODO missing in the following destructuring: docstring
         [_ name-s value] form
-        variable (common/->variable (common/mockable-gensym (name name-s)) ;; strip ns part
-                                    (make-local-symbol name-s)
-                                    source-context)
+        original-symbol (make-local-symbol name-s)
+        variable (impl/create-or-reuse-variable source-context original-symbol)
         _ (impl/register-variable! variable)
         value (or (if (seq value)
                     (if-let [[fn-sym & arities] value]
@@ -46,8 +54,11 @@
 
     
     (impl/register-definition! variable value dependencies)
-    ;; TODO can we define this in a better way, with docstrings etc, such that editors help to do auto-complete?
-    form))
+    `(do
+       ~@(for [sr (impl/symbol->symbols-to-recompile original-symbol)]
+           `(compile ~sr))
+       ;; TODO can we define this in a better way, with docstrings etc, such that editors help to do auto-complete?
+       ~form)))
 
 (s/fdef def
   :args (s/alt :arity-1 (s/cat :symbol symbol?)
@@ -82,12 +93,3 @@
                [name doc-string? attr-map? ([params*] prepost-map? body)+ attr-map?])}
   [& args]
   (expand-and-register-def! &form 'clojure.core/defn-))
-
-(defmacro compile [sym]
-  (let [resolved-sym (var->sym (resolve-symbol sym))
-        value (impl/sym->sexp sym)]
-    (println "Compiled" resolved-sym)
-    `(do
-       (def-qualified ~resolved-sym ~value)
-       (impl/register-compiled-symbol! '~resolved-sym)
-       nil)))

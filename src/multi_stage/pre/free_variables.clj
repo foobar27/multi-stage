@@ -49,7 +49,6 @@
 
       [(ast/->variable-reference source-context variable)]
       (do
-        (println "FOUND" variable "FREE?" (contains? all-global-variables variable))
         (if (contains? all-global-variables variable)
           #{variable}
           #{}))

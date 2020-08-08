@@ -49,7 +49,6 @@
   "Gets the index of an existing variable. Throws an exception if the
   variable is unknown."
   [scope var]
-  (println "SCOPE" scope)
   (or (get scope var)
       (throw (IllegalArgumentException. (str "Unknown variable: " var)))))
 

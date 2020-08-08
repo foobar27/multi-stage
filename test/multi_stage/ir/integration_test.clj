@@ -73,7 +73,6 @@
   (testing
       (is (= 55 (sum-1-to-n 10)))))
 
-
 ;;
 ;; Prefix matching for strings
 ;;

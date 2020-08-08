@@ -84,6 +84,14 @@
               [::symbol->variable symbol])
       (throw (IllegalArgumentException. (str "Attempting to access private symbol " symbol))))))
 
+(defn create-or-reuse-variable [source-context sym]
+  (or (get-in @*registered-definitions*
+              [::symbol->variable sym])
+      ;; TODO reuse if it exists
+      (common/->variable (common/mockable-gensym (name sym)) ;; strip ns part
+                         sym
+                         source-context)))
+
 (defn print-variable-definition [symbol]
   (meliae.patterns/print-pattern (variable->definition (get-registered-global-variable (namespace symbol) symbol))))
 
@@ -107,8 +115,7 @@
                           candidate-dependencies (->> (variable->sorted-dependencies candidate)
                                                       (map common/variable->original-symbol)
                                                       (into #{}))]
-                      (and (not (= sym candidate-symbol))
-                           (contains? candidate-dependencies sym))))
+                      (contains? candidate-dependencies sym)))
                   compiled-symbols))))
 
 (defn build-pre-ast-with-dependencies [variable]
