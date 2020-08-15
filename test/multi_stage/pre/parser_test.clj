@@ -1,7 +1,7 @@
 (ns multi-stage.pre.parser-test
   (:require [multi-stage.pre.parser :refer :all]
             [multi-stage.pre.ast :refer :all]
-            [multi-stage.common.core :refer [mock-gensyms]]
+            [multi-stage.common.core :refer [mock-gensyms unknown-source-context]]
             [multi-stage.test-utils :refer [verify-pattern remove-gensym with-generated-vars]]
             [clojure.walk :refer [macroexpand-all]]
             [clojure.test :as t :refer [testing deftest are]]

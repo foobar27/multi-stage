@@ -1,6 +1,7 @@
 (ns multi-stage.ir.ast
   (:require [clojure.spec.alpha :as s]
-            [meliae.patterns :refer [defmultipattern defpatterns]]))
+            [meliae.patterns :refer [defmultipattern defpatterns]])
+  (:refer-clojure :exclude [fn?]))
 
 ;; The intermediate-representation (IR) AST is used by the main
 ;; multi-stage evaluation algorithm. It is usually built from a

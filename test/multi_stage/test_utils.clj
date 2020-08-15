@@ -1,4 +1,5 @@
 (ns multi-stage.test-utils
+  (:refer-clojure :exclude [fn?])
   (:require [meliae.patterns :refer [print-pattern]]
             [multi-stage.post.generator :as clj-gen]
             [multi-stage.pre.parser :refer [generate-variable!] :as pre-parser]

@@ -114,5 +114,4 @@
                              [(->literal 1)])
                     nil)))))
 
-(deftest functions
-  (testing ))
+;; TODO functions
